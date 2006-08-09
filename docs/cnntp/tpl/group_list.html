@@ -1,0 +1,9 @@
+[% page.title = 'perl.org lists' %]
+
+<h1>List of lists</h1>
+
+<p>
+[% FOR group = groups %]
+<a href="[% group.uri %]">[% group.name %]</a><br/>
+[% END %]
+</p>

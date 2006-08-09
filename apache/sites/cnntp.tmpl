@@ -13,6 +13,11 @@
        PerlHandler CN::Control::Basic->super
     </Location>
 
+    <Location /group>
+       SetHandler perl-script
+       PerlHandler CN::Control::Group->super
+    </Location>
+
     #<Location /logout>
     #   SetHandler perl-script
     #   PerlHandler CN::Control::Logout->super
