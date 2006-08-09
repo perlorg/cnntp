@@ -1,0 +1,92 @@
+<%init>
+   use Apache::Util;
+   my $article = $nntp->article($msgid ? "<$msgid>" : $msgnum);
+
+   if ($msgid) {
+      my $xpath = $nntp->xpath("<$msgid>");
+      ($msgnum) = $xpath =~ m!/(\d+)$!;
+   }
+
+   my $min = $msgnum > 1 ? ($msgnum - 1) : $msgnum;
+   my $o_fmt = $m->comp("_overview_format", nntp => $nntp);
+   
+   my $xover = $msgnum ?  $nntp->xover([$min, $msgnum + 1]) : {};
+
+   if (0) {
+     $m->out("<pre>");
+     $m->out("min $min / msgnum: $msgnum\n");
+     $m->out(Data::Dumper->Dump([\$xover], [qw(xover)]));
+     $m->out("</pre>");
+   }
+
+   my @nav = (
+     ["Previous", ($msgnum-1), sub { $msgnum and $xover->{$msgnum-1} } ],
+     ["Next",     ($msgnum+1), sub { $msgnum and $xover->{$msgnum+1} } ],
+  );
+  my $navigation = join " | ",
+	map { &{$_->[2]} 
+               ? qq[<a href="$_->[1]">$_->[0]</a>] 
+               : $_->[0]
+            } @nav;
+
+
+
+   my ($header, $body);
+   my $showed_last_header = 0;
+   for (@$article) {
+     $_ = Apache::Util::escape_html($_);
+     if (defined $body) {
+       m/\s*\&gt;/ and s!^!<font color="#334433">! and s!$!</font>!;
+       $body .= $_;
+     }
+     else {
+       if (not defined $body and m/^References:/) {
+         s!&lt;(.*?)&gt;\s+!
+              qq[&lt;<a href="/group/$group;msgid=]
+              . Apache::Util::escape_uri($1)
+              .qq[">$1</a>&gt; ]
+          !ge;
+         $_ .= "\n" unless $_ =~ m/\n/;
+       }
+
+       if ($show_headers
+	   or m/^(Newsgroups|Message-Id|Date|From|To|Cc|Subject|References):/i) {
+	 s/\@/[at]/ if m/^(From|To|Cc)/;
+	 $header .= $_;
+	 $showed_last_header=1;
+       }
+       else {
+	 if ($showed_last_header and m/^\s+/) {
+	   $header .= $_;
+	 }
+	 else {
+	   $showed_last_header = 0;
+	 }
+	 $body = "" unless /\S/;	 
+       }
+
+     }
+   }
+
+</%init>
+
+There will be better navigation features and such soon; be patient.
+<p>
+<% $navigation %> | <a href="<% $r->uri %><% $show_headers ? "" : "?show_headers=1" %>">Toggle headers</a>
+
+<pre>
+<% $header %>
+<% $body %>
+</pre>
+
+<% $navigation %>
+
+<%args>
+  $nntp
+  $msgnum
+  $msgid  => ""
+  $group
+  $show_headers => 0
+  @group_info
+  %args
+</%args>

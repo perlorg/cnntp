@@ -1,0 +1,64 @@
+<%args>
+ $query
+ $grouplimit => undef
+</%args>
+
+<%init>
+ $query =~ s/'/"/g;
+  
+ my $realquery =  $grouplimit ? "list=$grouplimit AND $query" : $query;
+
+
+ my $result = `/home/robert/swish-e/src/swish-search -f /home/robert/swish-e/index.swish-e -w '$realquery'`;
+ my @results = split /\n/,$result;
+</%init>
+
+<H1>Search results for: <% $query %> </H1>
+
+<UL>
+% for (@results) {
+% next unless $_;
+% next if /^\.$/;
+% next if /^\#/;
+% next if m!/index!;
+% next if m!^\s*$!;
+% my ($rank,$file,$misc,$size) = split / /,$_,4;
+% $rank /= 10;
+% my $subject = $m->call("get_subject",file=>$file);
+% my $group = $m->call(".getgroup",file=>$file);
+<LI><%$rank%>% - <& .makelink, file=>$file, name=>$subject &><BR> 
+   <small><i><% $group %></i> (<% $size %> bytes)</small> 
+
+%}
+
+</UL>
+
+<%def .makelink>
+<%args>
+ $file
+ $name
+ $opt => ""
+</%args>
+<%init>
+ $m->cache($file);
+ $file =~ m!/(\d+)/(\d+)$!;
+ my $num = $1.$2;
+ my $group = "perl." . $m->call(".getgroup",file=>$file);
+ $group =~ s/-/./g;
+
+</%init> 
+<A HREF="http://nntp.perl.org/group/<% $group %>/<% $num %>" <% $opt %> >
+ <% $name %>
+</A>
+</%def>
+
+<%def .getgroup>
+<%args>
+ $file
+</%args>
+<%init>
+ $m->cache($file);
+ $file =~ m!/home/perlmail/([^/]+)/!;
+ return $1;
+</%init>
+</%def>

@@ -1,0 +1,9 @@
+<%init>
+   my $i;
+   $PerlWeb::nntp::overview_format ||= { map { s/:$//; $_ => $i++ } @{$nntp->overview_fmt} };
+   return $PerlWeb::nntp::overview_format;
+</%init>
+
+<%args>
+  $nntp
+</%args>

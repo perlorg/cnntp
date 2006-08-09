@@ -1,0 +1,19 @@
+
+<%init>
+   use BerkeleyDB;
+
+  my $db  = tie my %hash, 'BerkeleyDB::Btree', 
+	-Filename => '/home/archive/colobus/db/perl.tips.db',
+	-Flags => DB_RDONLY;
+#   $db  = new BerkeleyDB::Btree [OPTIONS] ;
+
+  die "Can't open: $!" unless $db;
+
+</%init>
+
+<PRE>
+% for (keys %hash) {
+<% $_ %>
+
+% }
+</PRE>

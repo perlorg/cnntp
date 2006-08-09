@@ -1,0 +1,21 @@
+
+  <VirtualHost *:[% config.port %]>
+    ServerName [% config.site.cnntp.servername %]
+    [% expandServerAliases( config.site.cnntp.aliases ) %]
+    PerlSetVar site [% site %]
+
+    PerlTransHandler Combust::Redirect->super
+
+    PerlModule CN
+
+    <Location />
+       SetHandler perl-script
+       PerlHandler CN::Control::Basic->super
+    </Location>
+
+    #<Location /logout>
+    #   SetHandler perl-script
+    #   PerlHandler CN::Control::Logout->super
+    #</Location>
+
+  </VirtualHost>

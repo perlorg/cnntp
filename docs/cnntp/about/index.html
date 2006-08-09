@@ -1,0 +1,55 @@
+[% page.title = 'About' %]
+
+<h1>About this site</h1>
+
+<p> 
+
+nntp.perl.org was created by <a href="http://askask.com/">Ask
+Bj&oslash;rn Hansen</a>.
+
+</p>
+
+<p> The site is built with
+<a href="http://www.apache.org/">Apache</a>,
+<a href="http://perl.apache.org/">mod_perl</a>, 
+<a href="http://combust.develooper.com/">Combust</a>,
+<a href="http://trainedmonkey.com/colobus/">colobus</a> and
+<a href="http://search.cpan.org/search?dist=libnet">Net::NNTP</a>.
+
+</p>
+
+<p>
+
+A bit of Perl code is using Net::NNTP to connect to the colobus
+server which uses the perl.org ezmlm archives as the "news spool".
+</p>
+
+<p>
+The code is available from Subversion at <a href="https://svn.develooper.com/projects/">https://svn.develooper.com/projects/</a>.
+</p>
+
+<p>
+
+Updates:
+<pre>
+2006 August
+  All new code! :-)
+
+2002/02/01
+  If you go to a too high article number you get redirected to the
+  latest articles instead of getting a 404.
+
+2002/01/30
+  Quoted text now comes in a slight gray greenish color. Different anyway.
+
+  When finding a message by msgid the Next and Previous buttons now
+  still works. (requires support of the xpath command in the news
+  server; I have a patch for colobus that adds that).
+
+  Email addresses from the headers are being slightly mangled now.  
+
+</pre>
+
+
+</p>
+
