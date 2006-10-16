@@ -1,0 +1,9 @@
+[% page.title = group.name _ ' archive' %]
+
+<h1>[% group.name %]</h1>
+
+<p>
+[% FOR article = articles %]
+<a href="[% group.uri %]/[% article.art %]">[% article.h_subject %]</a><br/>
+[% END %]
+</p>

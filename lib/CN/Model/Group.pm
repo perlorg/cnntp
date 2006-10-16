@@ -1,18 +1,7 @@
-package CN::Group;
+package CN::Model::Group;
 use strict;
-use CN;
-
-sub new {
-    my ($class, $group) = @_;
-    return bless { name => $group }, $class;
-}
 
 # select count(*) from header where grp = 60 and received > DATE_SUB(NOW(), INTERVAL 56 DAY);
-
-sub name {
-    my $self = shift;
-    $self->{name};
-}
 
 sub uri {
     my $self = shift;
