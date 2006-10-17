@@ -1,0 +1,11 @@
+
+
+<p>
+From: [% article.author_name |html %]<br/>
+Date: [% article.received.strftime("%B %e, %Y %H:%M") %]
+
+</p>
+
+<pre>
+[% article.body | html %]
+</pre>

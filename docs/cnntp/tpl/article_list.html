@@ -2,8 +2,13 @@
 
 <h1>[% group.name %]</h1>
 
-<p>
+<table>
 [% FOR article = articles %]
-<a href="[% group.uri %]/[% article.art %]">[% article.h_subject %]</a><br/>
+<tr>
+<td width="300"><a href="[% group.uri %]/[% article.id %]">[% article.h_subject_parsed | html %]</a></td>
+<td>[% article.thread_count %] messages</td>
+<td>[% article.author_name | html %]</td>
+<td>tid [% article.thread %]</td>
+</tr>
 [% END %]
-</p>
+</table>

@@ -2,10 +2,14 @@ package CN::Control;
 use strict;
 use base qw(Combust::Control Combust::Control::Bitcard);
 use Apache::Constants qw(OK);
-#use CN::User;
+use Email::Address;
 
 sub init {
     my $self = shift;
+
+    # should maybe just do this every N requests
+    Email::Address->purge_cache;
+
     return OK;
 }
 
