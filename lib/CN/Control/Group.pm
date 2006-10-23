@@ -84,8 +84,6 @@ sub render_group {
 
     my $max = $self->req_param('max') || 0;
 
-    my $group = $self->group;
-
     my ($year, $month) = ($self->request_setup->{year}, $self->request_setup->{month});
     warn "YEAR: $year / $month: $month";
 
@@ -107,9 +105,8 @@ sub render_group {
                       received => { lt => $month_obj->clone->add(months => 1) },
                       received => { gt => $month_obj },
                       ],
-           
            limit => 40,
-           group_by => 'thread',
+           group_by => 'thread_id',
            sort_by => 'id desc',
          );
 
@@ -134,6 +131,7 @@ sub render_article {
                and $article->received->month == $req->{month};
 
     $self->tpl_param('article' => $article);
+    $self->tpl_param('group'   => $self->group);
 
     return OK, $self->evaluate_template('tpl/article.html');
 
@@ -149,12 +147,7 @@ sub redirect_article {
     
     return 404 unless $article;
 
-    return $self->redirect(sprintf "%s/%04d/%02d/%d",
-                           $self->group->uri,
-                           $article->received->year, 
-                           $article->received->month, 
-                           $article->id
-                          );
+    return $self->redirect($article->uri);
 
 }
 

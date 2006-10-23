@@ -35,7 +35,7 @@ generate_schema($_) for @db_name;
 
 sub generate_schema {
   my $db_name = shift;
-  my $schema_class = $db_class{"$db_name"} || $db_class{"ypbot_$db_name"}
+  my $schema_class = $db_class{"$db_name"}
     or die "Bad db_name '$db_name'\n";
 
   print "Generating $schema_class ...\n";
@@ -47,7 +47,7 @@ sub generate_schema {
     base_class    => $base_class,
     class_prefix  => "Foo__::$schema_class", # Prevents ::Loader loading existing classes
     with_managers => 0,
-    # convention_manager => 'YP::DB::ConventionManager',
+    # convention_manager => 'CN::DB::ConventionManager',
   );
 
   my @classes = sort grep { $_->isa('Rose::DB::Object') }
@@ -80,19 +80,19 @@ EOS
   foreach my $class (@classes) {
     my $meta = $class->meta;
 
-    if ($meta->table eq 'sic_codes' and my $fk = $meta->foreign_key('sic_code')) {
-      # default fk name clashes with a column name, so fix it.
-      $fk->name('parent') if $fk->key_columns->{parent_id};
-      $meta->foreign_keys($fk);
-    }
     foreach my $col ($meta->columns) {
       $col->default('now') if $col->type eq 'datetime' and !$col->default and $col->not_null;
     }
-    my @isa = ($meta->table =~ /^(tag_types|sic_codes|auth_providers|sic_code_tags)$/)
+
+    if (cached_filter($meta->table)) {
+        $meta->cached_objects_expire_in('12 hours');
+    }
+
+    my @isa = cached_filter($meta->table)
       ? ( isa => "${base_class}::Cached") : ();
     my $t = $meta->perl_class_definition(indent => 2, @isa);
     my $m = $meta->perl_manager_class( isa => 'CN::DB::Manager');
-    
+
     $t =~ s/^use Foo__.*\n\n?//mg;
     s/\s*^1;$//m for $t, $m;
     s/Foo__:://g for ($t, $m, $class);;
@@ -147,3 +147,7 @@ sub filter_tables {
   return 1;
 }
 
+
+sub cached_filter {
+  $_[0] =~ /^(groups)$/ ? 1 : 0;
+}

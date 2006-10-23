@@ -1,11 +1,45 @@
+<a href="/">Front page</a> | <a href="[% group.uri %]">[% group.name %]</a>
 
+<h2>[%  article.h_subject_parsed | html  %]</h2>
 
-<p>
-From: [% article.author_name |html %]<br/>
-Date: [% article.received.strftime("%B %e, %Y %H:%M") %]
-
-</p>
+<div id="article_header">
+<div class="h_name">From:</div> [% article.author_name |html %]<br/>
+<div class="h_name">Date:</div> [% article.received.strftime("%B %e, %Y %H:%M") %]<br/>
+<div class="h_name">Subject:</div> [% article.h_subject_parsed | html  %]<br/>
+</div>
 
 <pre>
 [% article.body | html %]
 </pre>
+
+[% MACRO thread_part(thread, level) BLOCK %]
+  [% #USE Dumper; Dumper.dump(thread, level) %]
+  [% IF thread.message;
+      link = thread.message.id != article.id;
+   %]
+    <li>[% IF link %]<a href="[% thread.message.uri %]">[% ELSE; '<b>'; END %]
+      [% thread.message.h_subject_parsed | html %][% link ? '</a>' : '</b>' %]
+      by [% thread.message.author_name | html %]</li> [%
+   END;
+   IF thread.child;
+       newlevel = level+1;
+       '<ul>';
+       thread_part(thread.child, newlevel);
+       '</ul>';
+   END;
+   IF thread.next;
+       thread_part(thread.next, level);
+   END;
+   %]
+
+[% END %]
+
+<ul>
+[% FOR thread = article.thread.threader.rootset %]
+[% thread_part(thread, 0) %]
+[% END %]
+
+</ul>
+
+
+

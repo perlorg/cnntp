@@ -4,6 +4,16 @@ use Encode qw/decode/;
 use Email::Address;
 use CN::NNTP;
 use Email::MIME;
+use CN::Model::Thread;
+
+sub uri {
+    my $self = shift;
+    sprintf "%s/%04d/%02d/%d",
+      $self->group->uri,
+      $self->received->year, 
+      $self->received->month, 
+      $self->id
+}
 
 sub h_subject_parsed {
     my $self = shift;
@@ -14,16 +24,22 @@ sub h_subject_parsed {
 sub thread_count {
     my $self = shift;
     CN::Model->article->get_articles_count
-        (query => [ group_id => $self->group->id,
-                    thread   => $self->thread,
+        (query => [ group_id  => $self->group->id,
+                    thread_id => $self->thread_id,
                   ],
          );
+}
+
+sub thread {
+    my $self = shift;
+    CN::Model::Thread->new($self->group, $self->thread_id);
 }
 
 sub h_from_parsed {
     my $self = shift;
     return $self->{_h_from_parsed} if $self->{_h_from_parsed};
-    $self->{_h_from_parsed} = (Email::Address->parse($self->h_from))[0];
+    my $from = decode('MIME-Header', $self->h_from);
+    $self->{_h_from_parsed} = (Email::Address->parse($from))[0];
 }
 
 sub author_email {
@@ -35,16 +51,28 @@ sub author_name {
     my $self = shift;
     my $name = $self->h_from_parsed && $self->h_from_parsed->name;
     $name && $name =~ s/^"(.*)"$/$1/;
+    unless ($name and $name =~ m/\S/) {
+        $name = $self->author_email;
+        $name =~ s/\@.*//;
+    }
     $name;
 }
+
+my $cache = Combust::Cache->new(type => 'article_email');
 
 sub email {
     my $self = shift;
     return $self->{_article_parsed} if $self->{_article_parsed};
+    if (my $data = $cache->fetch(id => join(";", 1, $self->group->id, $self->id))) {
+        return $data->{data};
+    }
     my $nntp = CN::NNTP->nntp;
+    $nntp = CN::NNTP->nntp unless $nntp;
     $nntp->group($self->group->name);
     my $article = $nntp->article($self->id);
-    $self->{_article_parsed} = Email::MIME->new(join "", @$article);
+    my $email = Email::MIME->new(join "", @$article);
+    $cache->store(data => $email);
+    $self->{_article_parsed} = $email;
 }
 
 sub body {
@@ -71,6 +99,16 @@ sub body {
         
     }
     $body;
+}
+
+sub relative_date {
+    my $self = shift;
+    my $date = $self->received;
+    my $now  = DateTime->now();
+    my $age = $now - $date;
+    return $date->strftime("%e %b %Y") if $age->in_units('months') > 6;
+    return $date->strftime("%e %b") if $age->in_units('hours')  > 12;
+    return $date->strftime("%H:%M");
 }
 
 1;

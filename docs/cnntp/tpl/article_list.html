@@ -2,13 +2,20 @@
 
 <h1>[% group.name %]</h1>
 
-<table>
+[%  # TODO:
+    #  - earlier/later this month
+    #  - earlier/later months
+%]
+
+<table class="article_list" cellpadding=0 cellspacing=0>
+[% i = 1 %]
 [% FOR article = articles %]
-<tr>
-<td width="300"><a href="[% group.uri %]/[% article.id %]">[% article.h_subject_parsed | html %]</a></td>
-<td>[% article.thread_count %] messages</td>
-<td>[% article.author_name | html %]</td>
-<td>tid [% article.thread %]</td>
+<tr class="[% i = i + 1; (i mod 2) ? 'li_1' : 'li_2' %]">
+<td><a href="[% article.uri %]">[% article.h_subject_parsed | html %]</a></td>
+<td width="100">[% article.thread_count %] messages</td>
+<td width="220">[% article.author_name | html %]</td>
+<td width="100">[% article.relative_date %]</td>
+<td width="80" class="dimmed">tid [% article.thread_id %]</td>
 </tr>
 [% END %]
 </table>

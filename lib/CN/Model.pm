@@ -22,7 +22,7 @@ __PACKAGE__->meta->setup(
     msgid        => { type => 'varchar', default => '', length => 32, not_null => 1 },
     subjhash     => { type => 'varchar', default => '', length => 32, not_null => 1 },
     fromhash     => { type => 'varchar', default => '', length => 32, not_null => 1 },
-    thread       => { type => 'integer', default => '0', not_null => 1 },
+    thread_id    => { type => 'integer', default => '', not_null => 1 },
     parent       => { type => 'integer', default => '0', not_null => 1 },
     received     => { type => 'datetime', default => '0000-00-00 00:00:00', not_null => 1 },
     h_date       => { type => 'varchar', default => '', length => 255, not_null => 1 },
@@ -63,7 +63,7 @@ eval { require CN::Model::Article }
 
 use strict;
 
-use base qw(CN::DB::Object);
+use base qw(CN::DB::Object::Cached);
 
 __PACKAGE__->meta->setup(
   table   => 'groups',

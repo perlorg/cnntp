@@ -1,7 +1,8 @@
 
- /* because netscape 4 doesn't inherit from the body class we need to specify everything?!, gaah ... */
- body, table, td, p, span, h1, h2, h3, ul    { 
-   color: black; font-size: 13px; font-family: Verdana, Helvetica, Arial, Univers, sans-serif
+ body { 
+   color: black;
+   font-size: 0.9em;
+   font-family: Verdana, Helvetica, Arial, Univers, sans-serif;
  }
 
  span.comments   { font-size: 80% }
@@ -12,12 +13,14 @@
  h3             { font-weight: bold; }
  /* table { color: red; } */
 
-/* a:link   { color: #690020 }
- a:active { color: #003600 }
- a:hover  { color: #696040 }
- a:vlink  { color: #900000 } */
- .tt        { color: black; font-family: Courier } 
+ .tt        { color: black; font-family: Courier, monospace } 
 
-  /* this ought to remove the link color */
- .invisible { color: #ffffff; font-size: 10% }
+ div.h_name { width: 220px;
+               display: inline;
+            } 
 
+ table.article_list tr td { padding: 3px; }
+ tr.li_1 { background: #e5e5e5 }
+ tr.li_2 { background: #fff }
+
+ .dimmed { color: #aaa }
