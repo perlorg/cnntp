@@ -1,9 +1,35 @@
 [% page.title = 'perl.org lists' %]
 
+[% USE Number.Format %]
+
 <h1>List of lists</h1>
 
+
+<h2>Active lists</h2>
+
 <p>
-[% FOR group = groups %]
+[% FOR group = groups.active %]
+<a href="[% group.uri %]">[% group.name %]</a> ([% group.get_daily_average | round(0) %] per day)<br/>
+[% END %]
+</p>
+
+<h2>Slow lists</h2> 
+<p>
+[% FOR group = groups.slow %]
 <a href="[% group.uri %]">[% group.name %]</a><br/>
+[% END %]
+</p>
+
+<h2>Inactive lists</h2> 
+<p>
+[% FOR group = groups.inactive %]
+<a href="[% group.uri %]">[% group.name %]</a>
+[% latest_article = group.latest_article;
+   IF latest_article; %]
+[% #USE Dumper; Dumper.dump_html(latest_article) %]
+<span style="color:grey;">Last post</span> [% latest_article.received.strftime("%B %Y") %]
+[% END; %]
+
+<br/>
 [% END %]
 </p>

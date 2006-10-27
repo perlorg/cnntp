@@ -89,6 +89,33 @@ sub next_month {
     $article ? $article->received : undef;
 }
 
+sub get_recent_articles_count {
+    my $self = shift;
+    return $self->{_recent_count} if defined $self->{_recent_count};
+    my $count = CN::Model->article->get_articles_count
+        (query => [ group_id  => $self->id,
+                    received  => { gt => DateTime->now->subtract(months => 2) }
+                    ],
+         );
+    $self->{_recent_count} = $count;
+}
+
+sub get_daily_average {
+    my $self = shift;
+    my $count = $self->get_recent_articles_count;
+    $count / 60; 
+}
+
+sub latest_article {
+    my $self = shift;
+    my $article = CN::Model->article->get_articles
+            (  query => [ group_id => $self->id, ],
+               limit => 1,
+               sort_by => 'id desc',
+               );
+    $article && $article->[0];
+}
+
 sub get_thread_count {
     my ($self, $month) = @_;
     return 0 unless $month and $month->isa('DateTime');

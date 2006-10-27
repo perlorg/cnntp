@@ -48,7 +48,7 @@ sub author_name {
     my $name = $self->h_from_parsed && $self->h_from_parsed->name;
     $name && $name =~ s/^"(.*)"$/$1/;
     unless ($name and $name =~ m/\S/) {
-        $name = $self->author_email;
+        $name = $self->author_email || '';
         $name =~ s/\@.*//;
     }
     $name;
@@ -97,13 +97,13 @@ sub body {
     $body;
 }
 
-sub relative_date {
+sub short_date {
     my $self = shift;
     my $date = $self->received;
-    my $now  = DateTime->now();
-    my $age = $now - $date;
-    return $date->strftime("%e %b %Y") if $age->in_units('months') > 6;
-    return $date->strftime("%e %b") if $age->in_units('hours')  > 12;
+    my $age = time - $date->epoch;
+
+    return $date->strftime("%e %b %Y") if $age > 86400 * 30 * 6;
+    return $date->strftime("%e %b") if $age > 86400 / 2;
     return $date->strftime("%H:%M");
 }
 

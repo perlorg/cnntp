@@ -6,27 +6,52 @@ sub new {
     my ($class, $group, $thread_id) = @_;
     # TODO: lookup in cache
 
-    my $self = bless { group => $group, $thread_id => $thread_id }, $class;
-
-    my $articles = CN::Model->article->get_articles
-        (  query => [ group_id  => $group->id,
-                      thread_id => $thread_id,
-                    ],
-           order_by => 'parent'
-        );
-
-
-    my $threader = CN::Model::Article::Thread->new(@$articles);
-    $threader->thread;
-
-    $self->{threader} = $threader;
+    my $self = bless { group => $group, thread_id => $thread_id }, $class;
 
     # TODO: save to cache 
     $self;
 }
 
+sub authors {
+    my ($self, $how_many) = @_;
+    my %authors;
+    map { $authors{$_->author_name}++ } @{ $self->articles };
+    my @authors = sort { $authors{$b} <=> $authors{$a} } keys %authors;
+    @authors > $how_many ? splice(@authors, 0, $how_many) : @authors;
+}
+
+sub last_article {
+    my ($self, $month) = @_;
+    my $articles = $self->articles;
+    return $articles->[-1] unless $month;
+    my $last_time = $month->clone->set( day => 1 )->add(months => 1)->epoch;
+    my $last_article;
+    for my $article (@$articles) {
+        last if $last_time < $article->received->epoch; 
+        $last_article = $article;
+    }
+    $last_article;
+}
+
+sub articles {
+    my $self = shift;
+    return $self->{articles} if $self->{articles};
+    my $articles = CN::Model->article->get_articles
+        (  query => [ group_id  => $self->{group}->id,
+                      thread_id => $self->{thread_id},
+                    ],
+           order_by => 'id'
+        );
+    $self->{articles} = $articles;
+}
+
 sub threader {
-    shift->{threader};
+    my $self = shift;
+    return $self->{threader} if $self->{threader};
+    my $articles = $self->articles;
+    my $threader = CN::Model::Article::Thread->new(@$articles);
+    $threader->thread;
+    $self->{threader} = $threader;
 }
 
 sub rootset {

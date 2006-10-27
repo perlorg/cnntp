@@ -30,10 +30,12 @@ Postings from [% next_month.strftime("%B %Y") %]</a>
 [% FOR article = articles %]
 <tr class="[% i = i + 1; (i mod 2) ? 'li_1' : 'li_2' %]">
 <td><a href="[% article.uri %]">[% article.h_subject_parsed | html %]</a></td>
-<td width="130">[% article.thread_count %] messages</td>
-<td width="220">[% article.author_name | html %]</td>
-<td width="130">[% article.relative_date %]</td>
-<td width="80" class="dimmed">tid [% article.thread_id %]</td>
+<td width="130">[% article.thread_count %] <span class="lighter">messages</span></td>
+<td width="250" class="small">[%# article.author_name | html %]
+[% article.thread.authors(4).join(", ") | html %]
+</td>
+<td width="120">[% article.thread.last_article(this_month).short_date %]</td>
+<!-- <td width="80" class="dimmed small">tid [% article.thread_id %]</td> -->
 </tr>
 [% END %]
 </table>

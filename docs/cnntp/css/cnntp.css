@@ -24,3 +24,6 @@
  tr.li_2 { background: #fff }
 
  .dimmed { color: #aaa }
+ .lighter { color: #777 }
+ .small  { font-size: 85% }
+

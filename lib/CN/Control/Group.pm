@@ -11,11 +11,14 @@ sub request_setup {
     return $self->{setup} if $self->{setup};
 
     my ($group_name, $year, $month, $page_type, $number) = 
-      ($self->request->uri =~ m!^/group(?:/([^/]+)
-                                        (?:/([^/]+))?
-                                        (?:/([^/]+))?
-                                        (?:/(msg|page)(\d+))?
-                                       .html)?!x);
+        ($self->request->uri =~
+         m!^/group/([^/]+)
+          /([^/]+?)
+          /([^/]+?)
+          /(msg|page)(\d+)
+          \.html$
+         !x
+       );
 
     my ($page, $article) = (0, 0);
     if ($page_type and defined $number) {
@@ -24,17 +27,28 @@ sub request_setup {
     }
 
     unless ($group_name) {
+        ($group_name, $year, $month) = 
+        ($self->request->uri =~
+         m!^/group/([^/]+)
+          /([^/]+?)
+          (?:/([^/]+?))?
+          \.html$
+         !x
+       );
+    }
+
+    unless ($group_name) {
         ($group_name, $article) = 
             ($self->request->uri =~ m!^/group(?:/([^/]+)
-                                              (?:/(\d+))?
-                                              )?!x);
+                                              (?:/(\d+)?)?
+                                              $)?!x);
     }
-    
+
     return $self->{setup} = { group_name => $group_name || '',
-                              year       => $year || 0,
-                              month      => $month || 0,
-                              article    => $article,
-                              page       => $page || 1,
+                              year       => $year    || 0,
+                              month      => $month   || 0,
+                              article    => $article || 0,
+                              page       => $page    || 1,
                             };
 }
 
@@ -62,11 +76,10 @@ sub cache_info {
     my $self = shift;
     my $setup = $self->request_setup;
     warn Data::Dumper->Dump([\$setup], [qw(setup)]);
-    # return {};
-
-    # return {} if $setup->{msg};
+    return {};
 
     unless ($setup->{group_name}) {
+        return {};
         return { type => 'nntp_group',
                  id   => '_group_list_',
                };
@@ -74,7 +87,7 @@ sub cache_info {
 
     return {
             type => 'nntp_group',
-            id   => join ";", map { $setup->{$_} } qw(group_name year month page article),
+            id   => join ";", map { "$_=" . (defined $setup->{$_} ? $setup->{$_} : '__undef__') } qw(group_name year month page article),
            }
 
 }
@@ -82,7 +95,25 @@ sub cache_info {
 sub render_group_list {
     my $self = shift;
     my $groups = CN::Model->group->get_groups;
-    $self->tpl_param('groups', $groups); 
+
+    my %groups;
+    for my $group (@$groups) {
+        my $count = $group->get_recent_articles_count;
+        my $avg   = $group->get_daily_average;
+        if ($count == 0) {
+            push @{$groups{inactive}}, $group; 
+        }
+        else {
+            if ($avg > .4) {
+                push @{$groups{active}}, $group; 
+            }
+            else {
+                push @{$groups{slow}}, $group; 
+            }
+        }
+    }
+
+    $self->tpl_param('groups', \%groups); 
     return OK, $self->evaluate_template('tpl/group_list.html');
 }
 
@@ -100,18 +131,12 @@ sub render_group {
     my $max = $self->req_param('max') || 0;
 
     my ($year, $month, $page) = ($self->request_setup->{year}, $self->request_setup->{month}, $self->request_setup->{page});
-    warn "YEAR: $year / $month: $month";
 
     return $self->render_year_overview if $year and ! $month;
 
     unless ($year) {
-        my $newest_article = CN::Model->article->get_articles
-            (  query => [ group_id => $group->id, ],
-               limit => 1,
-               sort_by => 'id desc',
-               );
+        my $newest_article = $group->latest_article;
         return 404 unless $newest_article;
-        $newest_article = $newest_article->[0];
         ($year, $month) = ($newest_article->received->year, $newest_article->received->month);
     }
 
@@ -119,7 +144,7 @@ sub render_group {
 
     $self->tpl_param('this_month' => $month_obj);
 
-    my $per_page = 50;
+    my $per_page = 75;
 
     my $thread_count = $group->get_thread_count($month_obj);
     my $pages = ceil( $thread_count / $per_page);
