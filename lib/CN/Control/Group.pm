@@ -3,19 +3,25 @@ use strict;
 use base qw(CN::Control);
 use Apache::Constants qw(OK);
 use CN::Model;
+use POSIX qw(ceil);
 
 sub request_setup {
     my $self = shift;
     
     return $self->{setup} if $self->{setup};
 
-    my ($group_name, $year, $month, $article) = 
+    my ($group_name, $year, $month, $page_type, $number) = 
       ($self->request->uri =~ m!^/group(?:/([^/]+)
-                                        /([^/]+)
-                                        /([^/]+)
-                                        (?:/(\d+))?
-                                       )?!x);
+                                        (?:/([^/]+))?
+                                        (?:/([^/]+))?
+                                        (?:/(msg|page)(\d+))?
+                                       .html)?!x);
 
+    my ($page, $article) = (0, 0);
+    if ($page_type and defined $number) {
+        $page    = $number if $page_type eq 'page';
+        $article = $number if $page_type eq 'msg';
+    }
 
     unless ($group_name) {
         ($group_name, $article) = 
@@ -27,7 +33,8 @@ sub request_setup {
     return $self->{setup} = { group_name => $group_name || '',
                               year       => $year || 0,
                               month      => $month || 0,
-                              article    => $article || 0,
+                              article    => $article,
+                              page       => $page || 1,
                             };
 }
 
@@ -55,13 +62,21 @@ sub cache_info {
     my $self = shift;
     my $setup = $self->request_setup;
     warn Data::Dumper->Dump([\$setup], [qw(setup)]);
-    return {};
-    return {} if $setup->{msg};
-    return {} if $setup->{group_name};
+    # return {};
 
-    return { type => 'nntp_group',
-             id   => $setup->{group_name} || '_group_list_',
-           };
+    # return {} if $setup->{msg};
+
+    unless ($setup->{group_name}) {
+        return { type => 'nntp_group',
+                 id   => '_group_list_',
+               };
+    }
+
+    return {
+            type => 'nntp_group',
+            id   => join ";", map { $setup->{$_} } qw(group_name year month page article),
+           }
+
 }
 
 sub render_group_list {
@@ -84,8 +99,10 @@ sub render_group {
 
     my $max = $self->req_param('max') || 0;
 
-    my ($year, $month) = ($self->request_setup->{year}, $self->request_setup->{month});
+    my ($year, $month, $page) = ($self->request_setup->{year}, $self->request_setup->{month}, $self->request_setup->{page});
     warn "YEAR: $year / $month: $month";
+
+    return $self->render_year_overview if $year and ! $month;
 
     unless ($year) {
         my $newest_article = CN::Model->article->get_articles
@@ -99,21 +116,66 @@ sub render_group {
     }
 
     my $month_obj = DateTime->new(year => $year, month => $month, day => 1);
-    #$Rose::DB::Object::Manager::Debug = 1;
+
+    $self->tpl_param('this_month' => $month_obj);
+
+    my $per_page = 50;
+
+    my $thread_count = $group->get_thread_count($month_obj);
+    my $pages = ceil( $thread_count / $per_page);
+
+    $self->tpl_param(page_number => $page);
+    $self->tpl_param(pages       => $pages);
+
+    warn "COUNT: $thread_count / PAGES: $pages";
+
     my $articles = CN::Model->article->get_articles
         (  query => [ group_id => $group->id,
                       received => { lt => $month_obj->clone->add(months => 1) },
                       received => { gt => $month_obj },
                       ],
-           limit => 40,
+           limit => $per_page,
+           offset => ( $page * $per_page - $per_page ),
            group_by => 'thread_id',
            sort_by => 'id desc',
          );
+
+    $Rose::DB::Object::Manager::Debug = 0;
+
+
+    $self->tpl_param('previous_month' => $group->previous_month($month_obj));
+    $self->tpl_param('next_month'     => $group->next_month($month_obj));
 
     $self->tpl_param(group => $group);
     $self->tpl_param(articles => $articles);
 
     return OK, $self->evaluate_template('tpl/article_list.html');
+}
+
+sub render_year_overview {
+    my $self = shift;
+    my $year = $self->request_setup->{year};
+    my $group = $self->group;
+    my @months;
+    for my $month (1..12) { 
+        my $month_obj = DateTime->new(year => $year, month => $month, day => 1);
+        my $count = 
+          CN::Model->article->get_articles_count
+              (query => [ group_id  => $group->id,
+                          received => { lt => $month_obj->clone->add(months => 1) },
+                          received => { gt => $month_obj },
+                        ],
+              );
+        push @months, { month => $month_obj, count => $count } if $count;
+    }
+
+    $self->tpl_param('previous_year' => $group->previous_month(DateTime->new(year => $year, month => 1)));
+    $self->tpl_param('next_year'     => $group->next_month(    DateTime->new(year => $year, month => 12)));
+
+    $self->tpl_param(group  => $self->group);
+    $self->tpl_param(months => \@months);
+    $self->tpl_param(year   => $year);
+    return OK, $self->evaluate_template('tpl/year.html');
 }
 
 sub render_article {
@@ -124,6 +186,8 @@ sub render_article {
     my $article = CN::Model->article->fetch(group_id => $self->group->id,
                                             id       => $req->{article}
                                             );
+
+    return 404 unless $article;
 
     # should we just return 404? 
     return $self->redirect_article

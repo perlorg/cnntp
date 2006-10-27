@@ -1,4 +1,7 @@
 
+group controller: 
+  - show all messages, "not threaded"
+
 colobus-archives:
   - strip re: re: re: (etc)
   - when no parent, look for the same subject in the last few days (even when we can't strip re:)

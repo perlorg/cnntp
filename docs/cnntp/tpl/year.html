@@ -1,0 +1,21 @@
+[% page.title = group.name _ ' archive ' _ year %]
+
+<h1>[% group.name %] [% year %]</h1>
+
+[% IF previous_year %]
+  <a href="[% group.uri(year => previous_year) %]">[% previous_year.year %]</a>
+[% END %]
+[% previous_year AND next_year ? ' | ' : '' %]
+[% IF next_year %]
+  <a href="[% group.uri(year => next_year) %]">[% next_year.year %]</a>
+[% END %]
+
+<ul>
+[% FOR m = months %]
+<li><a href="[% group.uri(m.month) %]">
+[% m.month.strftime("%B %Y") %]</a>
+([% m.count %] postings)
+</li>
+</a>
+[% END %]
+</ul>

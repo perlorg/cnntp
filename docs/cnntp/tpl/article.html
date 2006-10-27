@@ -1,9 +1,12 @@
-<a href="/">Front page</a> | <a href="[% group.uri %]">[% group.name %]</a>
+<a href="/">Front page</a> | <a href="[% group.uri %]">[% group.name %]</a> |
+<a href="[% group.uri(article.received) %]">Postings from [% article.received.strftime("%B %Y") %]</a>
 
 <h2>[%  article.h_subject_parsed | html  %]</h2>
 
+[% page.title = article.h_subject_parsed %]
+
 <div id="article_header">
-<div class="h_name">From:</div> [% article.author_name |html %]<br/>
+<div class="h_name">From:</div> <b>[% article.author_name |html %]</b><br/>
 <div class="h_name">Date:</div> [% article.received.strftime("%B %e, %Y %H:%M") %]<br/>
 <div class="h_name">Subject:</div> [% article.h_subject_parsed | html  %]<br/>
 </div>

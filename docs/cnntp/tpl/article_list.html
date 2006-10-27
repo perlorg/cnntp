@@ -2,6 +2,24 @@
 
 <h1>[% group.name %]</h1>
 
+<p>
+
+[% IF previous_month %]
+<a href="[% group.uri(previous_month) %]">
+Postings from [% previous_month.strftime("%B %Y") %]</a>
+[% # previous_month %]
+| [% END %]
+<b>Postings from [% this_month.strftime("%B %Y") %]</b>
+
+[% IF next_month %]
+| <a href="[% group.uri(next_month) %]">
+Postings from [% next_month.strftime("%B %Y") %]</a>
+[%#  next_month %]
+[% END %]
+</p>
+
+[% PROCESS tpl/article_list/page_nav.html %]
+
 [%  # TODO:
     #  - earlier/later this month
     #  - earlier/later months
@@ -12,10 +30,16 @@
 [% FOR article = articles %]
 <tr class="[% i = i + 1; (i mod 2) ? 'li_1' : 'li_2' %]">
 <td><a href="[% article.uri %]">[% article.h_subject_parsed | html %]</a></td>
-<td width="100">[% article.thread_count %] messages</td>
+<td width="130">[% article.thread_count %] messages</td>
 <td width="220">[% article.author_name | html %]</td>
-<td width="100">[% article.relative_date %]</td>
+<td width="130">[% article.relative_date %]</td>
 <td width="80" class="dimmed">tid [% article.thread_id %]</td>
 </tr>
 [% END %]
 </table>
+
+[% PROCESS tpl/article_list/page_nav.html %]
+
+<p>
+<a href="[% group.uri(year = this_month) %]">[% group.name %] [% this_month.strftime('%Y') %]</a>
+</p>

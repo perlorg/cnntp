@@ -1,0 +1,9 @@
+[% IF pages > 1 %]
+<p>
+[% FOR p = [1..pages] %]
+  [% IF p == page_number %]<b>page [% p %]</b>[% ELSE %]
+    <a href="[% group.uri(month => this_month, page => p) %]">page [% p %]</a> 
+  [% END %]
+[% END %]
+</p>
+[% END%]

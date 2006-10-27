@@ -8,11 +8,7 @@ use CN::Model::Thread;
 
 sub uri {
     my $self = shift;
-    sprintf "%s/%04d/%02d/%d",
-      $self->group->uri,
-      $self->received->year, 
-      $self->received->month, 
-      $self->id
+    $self->group->uri($self)
 }
 
 sub h_subject_parsed {
@@ -71,7 +67,7 @@ sub email {
     $nntp->group($self->group->name);
     my $article = $nntp->article($self->id);
     my $email = Email::MIME->new(join "", @$article);
-    $cache->store(data => $email);
+    $cache->store(data => $email, expires => 86400*3);
     $self->{_article_parsed} = $email;
 }
 
