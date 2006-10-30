@@ -1,9 +1,14 @@
 [% IF pages > 1 %]
 <p>
+<a href="[% group.uri(month => this_month, page => 1) %]">Oldest</a> 
+
 [% FOR p = [1..pages] %]
   [% IF p == page_number %]<b>page [% p %]</b>[% ELSE %]
-    <a href="[% group.uri(month => this_month, page => p) %]">page [% p %]</a> 
+    <a href="[% group.uri(month => this_month, page => p) %]">[% p %]</a> 
   [% END %]
 [% END %]
+
+<a href="[% group.uri(month => this_month, page => pages) %]">Latest</a> 
+
 </p>
 [% END%]

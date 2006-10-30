@@ -10,6 +10,9 @@ sub request_setup {
     
     return $self->{setup} if $self->{setup};
 
+    # increment this to invalidate all the pages cached
+    my $page_version = 1;
+
     my ($group_name, $year, $month, $page_type, $number) = 
         ($self->request->uri =~
          m!^/group/([^/]+)
@@ -37,7 +40,17 @@ sub request_setup {
        );
     }
 
-    
+    my $feed_format = '';
+    unless ($group_name) {
+        ($group_name, $feed_format) = 
+        ($self->request->uri =~
+         m!^/group/([^/]+)
+          /(rss|atom)
+          \.xml$
+         !x
+       );
+    }
+
 
     unless ($group_name) {
         ($group_name, $article) = 
@@ -62,6 +75,8 @@ sub request_setup {
                               month      => $month   || 0,
                               article    => $article || 0,
                               page       => $page    || 1,
+                              feed_format=> $feed_format || '',
+                              version    => $page_version,
                             };
 }
 
@@ -80,9 +95,12 @@ sub render {
         return $self->render_group_list unless $req->{group_name};
         my $group = CN::Model->group->fetch(name => $req->{group_name});
         return 404 unless $group;
-        return $self->render_group($group) unless $req->{article};
-        return $self->redirect_article($group, $req->{article}) unless $req->{year}; 
-        return $self->render_article;
+        if ($req->{article}) {
+            return $self->redirect_article($group, $req->{article}) unless $req->{year}; 
+            return $self->render_article;
+        }
+        return $self->render_feed($group)  if $req->{feed_format};
+        return $self->render_group($group);
     };
     if ($@) {
         return $self->show_error($@)
@@ -97,17 +115,19 @@ sub cache_info {
     return {} unless $setup;
 
     #warn Data::Dumper->Dump([\$setup], [qw(setup)]);
-    #return {}; # unless $self->deployment_mode eq 'prod';
+    return {}; # unless $self->deployment_mode eq 'prod';
+
+    my $type = 'nntp_group_page'; 
 
     unless ($setup->{group_name}) {
-        return { type => 'nntp_group',
+        return { type => $type,
                  id   => '_group_list_',
-               };
+             };
     }
 
     return {
-            type => 'nntp_group_page',
-            id   => join ";", map { "$_=" . (defined $setup->{$_} ? $setup->{$_} : '__undef__') } qw(group_name year month page article),
+            type => $type,
+            id   => join ";", map { "$_=" . (defined $setup->{$_} ? $setup->{$_} : '__undef__') } qw(version group_name year month page article feed_format),
            }
 
 }
@@ -219,6 +239,24 @@ sub render_year_overview {
     $self->tpl_param(months => \@months);
     $self->tpl_param(year   => $year);
     return OK, $self->evaluate_template('tpl/year.html');
+}
+
+sub render_feed {
+    my $self  = shift;
+    my $group = $self->group;
+    my $setup = $self->request_setup;
+
+    my $articles = CN::Model->article->get_articles
+        (  query => [ group_id => $group->id,
+                    ],
+           limit => 40,
+           group_by => 'thread_id',
+           sort_by => 'id desc',
+         );
+
+    
+
+    return OK, ' foo ';
 }
 
 sub render_article {

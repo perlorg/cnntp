@@ -28,7 +28,7 @@ Postings from [% next_month.strftime("%B %Y") %]</a>
 %]
 
 <table class="article_list" cellpadding=0 cellspacing=0>
-[% i = 1 %]
+[% i = 0 %]
 [% FOR article = articles %]
 <tr class="[% i = i + 1; (i mod 2) ? 'li_1' : 'li_2' %]">
 <td><a href="[% article.uri %]">[% article.h_subject_parsed | html %]</a></td>
@@ -45,5 +45,5 @@ Postings from [% next_month.strftime("%B %Y") %]</a>
 [% PROCESS tpl/article_list/page_nav.html %]
 
 <p>
-<a href="[% group.uri(year = this_month) %]">[% group.name %] [% this_month.strftime('%Y') %]</a>
+<a href="[% group.uri(year = this_month) %]">Browse [% group.name %] in [% this_month.strftime('%Y') %] </a>
 </p>

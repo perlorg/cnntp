@@ -1,5 +1,5 @@
 
- body { 
+ body, td { 
    color: black;
    font-size: 0.9em;
    font-family: Verdana, Helvetica, Arial, Univers, sans-serif;
@@ -7,11 +7,9 @@
 
  span.comments   { font-size: 80% }
  span.scomments   { font-size: 50% }
- .list         { font-size: 80% }
  h1             { font-size: 155%; font-weight: bold; }
  h2             {  font-size: 125%; font-weight: bold;}
  h3             { font-weight: bold; }
- /* table { color: red; } */
 
  .tt        { color: black; font-family: Courier, monospace } 
 

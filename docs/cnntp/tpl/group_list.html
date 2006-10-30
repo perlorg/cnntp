@@ -21,15 +21,17 @@
 </p>
 
 <h2>Inactive lists</h2> 
-<p>
+<table>
 [% FOR group = groups.inactive %]
-<a href="[% group.uri %]">[% group.name %]</a>
+<tr><td>
+<a href="[% group.uri %]">[% group.name %]</a></td>
+<td>
 [% latest_article = group.latest_article;
    IF latest_article; %]
 [% #USE Dumper; Dumper.dump_html(latest_article) %]
 <span style="color:grey;">Last post</span> [% latest_article.received.strftime("%B %Y") %]
+</td>
+</tr>
 [% END; %]
-
-<br/>
 [% END %]
-</p>
+</table>

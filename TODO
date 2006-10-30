@@ -3,6 +3,10 @@ display .name as mail style name (perl5-porters vs perl.perl5.porters)
 
 rss and atom feeds
 
+"next thread"
+
+Add description to group list, then more data (Avg messages, last post ...)
+
 group controller: 
   - show all messages, "not threaded"
 
