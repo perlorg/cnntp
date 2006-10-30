@@ -30,7 +30,7 @@ Postings from [% next_month.strftime("%B %Y") %]</a>
 [% FOR article = articles %]
 <tr class="[% i = i + 1; (i mod 2) ? 'li_1' : 'li_2' %]">
 <td><a href="[% article.uri %]">[% article.h_subject_parsed | html %]</a></td>
-<td width="130">[% article.thread_count %] <span class="lighter">messages</span></td>
+<td width="130">[% article.thread_count %] <span class="lighter">message[% article.thread_count > 1 ? 's' : '' %]</span></td>
 <td width="250" class="small">[%# article.author_name | html %]
 [% article.thread.authors(4).join(", ") | html %]
 </td>

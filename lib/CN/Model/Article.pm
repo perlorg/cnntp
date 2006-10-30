@@ -19,7 +19,9 @@ sub h_subject_parsed {
 
 sub thread_count {
     my $self = shift;
-    CN::Model->article->get_articles_count
+    return $self->{_thread_count} if $self->{_thread_count};
+    $self->{_thread_count} =
+      CN::Model->article->get_articles_count
         (query => [ group_id  => $self->group->id,
                     thread_id => $self->thread_id,
                   ],
@@ -62,7 +64,7 @@ sub _navigation {
 sub _search_thread {
     my ($self, $mail, $last) = @_;
 
-    return if $self->_check_navigation($mail, $last);
+    return if $self->_check_navigation($mail, $last) if $mail;
 
     if ($mail->child) {
         $self->_search_thread($mail->child, $mail);
