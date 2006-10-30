@@ -64,7 +64,8 @@ sub _navigation {
 sub _search_thread {
     my ($self, $mail, $last) = @_;
 
-    return if $mail and $self->_check_navigation($mail, $last);
+    return if $mail && $mail->message
+       and $self->_check_navigation($mail, $last);
 
     if ($mail->child) {
         $self->_search_thread($mail->child, $mail);
