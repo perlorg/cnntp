@@ -108,12 +108,13 @@ sub get_daily_average {
 
 sub latest_article {
     my $self = shift;
+    return $self->{_latest_article} if $self->{_latest_article}; 
     my $article = CN::Model->article->get_articles
             (  query => [ group_id => $self->id, ],
                limit => 1,
                sort_by => 'id desc',
                );
-    $article && $article->[0];
+    $self->{_latest_article} = $article && $article->[0];
 }
 
 sub get_thread_count {

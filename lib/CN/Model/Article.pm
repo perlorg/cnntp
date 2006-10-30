@@ -28,7 +28,72 @@ sub thread_count {
 
 sub thread {
     my $self = shift;
-    CN::Model::Thread->new($self->group, $self->thread_id);
+    return $self->{_thread} if $self->{_thread};
+    $self->{_thread} = CN::Model::Thread->new($self->group, $self->thread_id);
+}
+
+sub previous_in_thread {
+    my $self = shift;
+    $self->_navigation->{previous}
+}
+
+sub next_in_thread {
+    my $self = shift;
+    $self->_navigation->{next}
+}
+
+
+sub _navigation {
+    my $self = shift;
+    return $self->{_navigation} if $self->{_navigation};
+
+    $self->{_navigation} = {};
+
+    $self->{_last_candidate} = undef;
+
+    $self->_search_thread($self->thread->rootset);
+
+    delete $self->{_seen_me};
+    delete $self->{_last};
+
+    $self->{_navigation};
+}
+
+sub _search_thread {
+    my ($self, $mail, $last) = @_;
+
+    return if $self->_check_navigation($mail, $last);
+
+    if ($mail->child) {
+        $self->_search_thread($mail->child, $mail);
+    }
+    if ($mail->next) {
+        $self->_search_thread($mail->next, $mail);
+    }
+}
+
+sub _check_navigation {
+    my ($self, $mail, $last) = @_;
+    return 1 if $self->_navigation->{next};
+
+    #warn "$$ MID: ", $mail->message->id,
+    #  " SID: ", $self->id,
+    #  " LID: ", $last ? $last->message->id : "n/a", "\n";
+
+    if ($self->id == $mail->message->id) {
+        #warn "$$ seen me!\n";
+        $self->{_seen_me} = 1;
+        $self->_navigation->{previous} = $last->message if $last;
+    }
+
+    if ($self->{_seen_me}) {
+        if ($mail->message->id != $self->id) {
+            $self->_navigation->{next} = $mail->message;
+        }
+    }
+
+    return 1 if $self->_navigation->{next};
+    return 0;
 }
 
 sub h_from_parsed {
@@ -54,7 +119,7 @@ sub author_name {
     $name;
 }
 
-my $cache = Combust::Cache->new(type => 'article_email');
+my $cache = Combust::Cache->new(type => 'nntp_article_email');
 
 sub email {
     my $self = shift;
@@ -97,10 +162,17 @@ sub body {
     $body;
 }
 
-sub short_date {
+sub age_seconds {
     my $self = shift;
     my $date = $self->received;
-    my $age = time - $date->epoch;
+    time - $date->epoch;
+}
+
+sub short_date {
+    my $self = shift;
+    my $age = $self->age_seconds;
+
+    my $date = $self->received;
 
     return $date->strftime("%e %b %Y") if $age > 86400 * 30 * 6;
     return $date->strftime("%e %b") if $age > 86400 / 2;

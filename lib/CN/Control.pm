@@ -22,7 +22,6 @@ sub bc_info_required {
 }
 
 
-
 package CN::Control::Basic;
 use base qw(CN::Control Combust::Control::Basic);
 

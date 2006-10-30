@@ -37,12 +37,25 @@ sub request_setup {
        );
     }
 
+    
+
     unless ($group_name) {
         ($group_name, $article) = 
             ($self->request->uri =~ m!^/group(?:/([^/]+)
                                               (?:/(\d+)?)?
                                               $)?!x);
     }
+
+    # redirect /2006/09/ to /2006/09.html 
+    if ($self->request->uri =~ m!^/(group/[^/]+)/(\d{4})/(\d{2})/?$!) {
+        die { redirect => "/$1/$2/$3.html" }
+    }
+    
+
+    # fail-safe to catch bad urls that just would give us the group
+    # index
+    die { status => 404 }
+      unless $group_name or $self->request->uri =~ m!^/group/?$!;
 
     return $self->{setup} = { group_name => $group_name || '',
                               year       => $year    || 0,
@@ -55,7 +68,13 @@ sub request_setup {
 sub render {
     my $self = shift;
 
-    my $req = $self->request_setup;
+    my $req = eval { $self->request_setup };
+    if (my $err = $@) {
+        return 500 unless ref $err;
+        return $self->redirect($err->{redirect}) if $err->{redirect};
+        return 404 if $err->{status} and $err->{status} == 404;
+        return $self->show_error($err->{message});
+    }
 
     my @x = eval { 
         return $self->render_group_list unless $req->{group_name};
@@ -74,19 +93,20 @@ sub render {
 
 sub cache_info {
     my $self = shift;
-    my $setup = $self->request_setup;
-    warn Data::Dumper->Dump([\$setup], [qw(setup)]);
-    return {};
+    my $setup = eval { $self->request_setup };
+    return {} unless $setup;
+
+    #warn Data::Dumper->Dump([\$setup], [qw(setup)]);
+    #return {}; # unless $self->deployment_mode eq 'prod';
 
     unless ($setup->{group_name}) {
-        return {};
         return { type => 'nntp_group',
                  id   => '_group_list_',
                };
     }
 
     return {
-            type => 'nntp_group',
+            type => 'nntp_group_page',
             id   => join ";", map { "$_=" . (defined $setup->{$_} ? $setup->{$_} : '__undef__') } qw(group_name year month page article),
            }
 
@@ -100,7 +120,7 @@ sub render_group_list {
     for my $group (@$groups) {
         my $count = $group->get_recent_articles_count;
         my $avg   = $group->get_daily_average;
-        if ($count == 0) {
+        if ($count == 0 and $group->latest_article->age_seconds > 86400 * 30 * 4) {
             push @{$groups{inactive}}, $group; 
         }
         else {
@@ -151,8 +171,6 @@ sub render_group {
 
     $self->tpl_param(page_number => $page);
     $self->tpl_param(pages       => $pages);
-
-    warn "COUNT: $thread_count / PAGES: $pages";
 
     my $articles = CN::Model->article->get_articles
         (  query => [ group_id => $group->id,

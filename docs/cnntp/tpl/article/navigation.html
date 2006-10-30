@@ -1,0 +1,10 @@
+
+[% IF article.previous_in_thread %]
+<a href="[% article.previous_in_thread.uri %]">Back</a>
+[% END %]
+
+[% IF article.previous_in_thread AND article.next_in_thread %] | [% END %]
+
+[% IF article.next_in_thread %]
+<a href="[% article.next_in_thread.uri %]">Next</a>
+[% END %]

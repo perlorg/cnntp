@@ -5,6 +5,8 @@
 
 [% page.title = article.h_subject_parsed %]
 
+[% PROCESS tpl/article/navigation.html  %]
+
 <div id="article_header">
 <div class="h_name">From:</div> <b>[% article.author_name |html %]</b><br/>
 <div class="h_name">Date:</div> [% article.received.strftime("%B %e, %Y %H:%M") %]<br/>
@@ -20,7 +22,7 @@
   [% IF thread.message;
       link = thread.message.id != article.id;
    %]
-    <li>[% IF link %]<a href="[% thread.message.uri %]">[% ELSE; '<b>'; END %]
+    <li>[% IF link %]<!-- #[% thread.message.id %] --><a href="[% thread.message.uri %]">[% ELSE; '<b>'; END %]
       [% thread.message.h_subject_parsed | html %][% link ? '</a>' : '</b>' %]
       by [% thread.message.author_name | html %]</li> [%
    END;
@@ -36,6 +38,8 @@
    %]
 
 [% END %]
+
+[% PROCESS tpl/article/navigation.html  %]
 
 <ul>
 [% FOR thread = article.thread.threader.rootset %]
