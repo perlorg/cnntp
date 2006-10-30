@@ -237,6 +237,8 @@ sub render_article {
         unless $article->received->year == $req->{year}
                and $article->received->month == $req->{month};
 
+    # $article->email; # die here if we can't get the article from cache or nntp
+
     $self->tpl_param('article' => $article);
     $self->tpl_param('group'   => $self->group);
 
@@ -261,10 +263,7 @@ sub redirect_article {
 sub show_error {
     my ($self, $msg) = @_;
     $self->tpl_param(msg => $msg);
-    $self->r->status(500);
-    return OK, $self->evaluate_template('tpl/error.html');
+    return 500, $self->evaluate_template('tpl/error.html');
 }
-
-sub show_nntp_error { shift->show_error('Could not connect to backend NNTP server; please try again later'); }
 
 1;

@@ -64,7 +64,7 @@ sub _navigation {
 sub _search_thread {
     my ($self, $mail, $last) = @_;
 
-    return if $self->_check_navigation($mail, $last) if $mail;
+    return if $mail and $self->_check_navigation($mail, $last);
 
     if ($mail->child) {
         $self->_search_thread($mail->child, $mail);
@@ -131,6 +131,7 @@ sub email {
     }
     my $nntp = CN::NNTP->nntp;
     $nntp = CN::NNTP->nntp unless $nntp;
+    die "Could not connect to backend NNTP server; please try again later\n" unless $nntp;
     $nntp->group($self->group->name);
     my $article = $nntp->article($self->id);
     my $email = Email::MIME->new(join "", @$article);

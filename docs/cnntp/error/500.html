@@ -1,0 +1,13 @@
+[% IF error_text %]
+<i>[% error_text %]</i></p><p>
+[% END %]
+
+<p>
+Oops, there was a server error.  Most likely we couldn't connect to
+the NNTP backend.  Please try again later.
+</p>
+
+[% IF combust.config.site.${site}.siteadmin %]
+If the problem persists, please <a href="mailto:[% combust.config.site.${site}.siteadmin %]">send mail to the staff</a>.
+[% END %]
+
