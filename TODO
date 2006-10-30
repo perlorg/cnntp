@@ -1,12 +1,20 @@
 
-display .name as mail style name (perl5-porters vs perl.perl5.porters)
+general: 
+  display group.name as mail style name (perl5-porters vs perl.perl5.porters)
 
-rss and atom feeds
+group list:
+  - Add description to group list, then more data (Avg messages, last post ...)
+  - nicer formatting
 
-"next thread"
-
-Add description to group list, then more data (Avg messages, last post ...)
-
-group controller: 
+article list (in a group):
+  - rss and atom feeds
   - show all messages, "not threaded"
+  - show threads by first message in addition to by last message 
+
+article view:
+  - show all messages in the thread on one page (or a few pages... hmn)
+    - flat? nested?
+
+  - "next/previous thread" links
+
 
