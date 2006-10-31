@@ -136,7 +136,7 @@ sub email {
     $nntp->group($self->group->name);
     my $article = $nntp->article($self->id);
     my $email = Email::MIME->new(join "", @$article);
-    $cache->store(data => $email, expires => 86400*3);
+    $cache->store(data => $email, expires => 86400*6*30); # cache for 6 months
     $self->{_article_parsed} = $email;
 }
 

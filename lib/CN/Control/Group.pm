@@ -115,13 +115,14 @@ sub cache_info {
     return {} unless $setup;
 
     #warn Data::Dumper->Dump([\$setup], [qw(setup)]);
-    return {}; # unless $self->deployment_mode eq 'prod';
+    return {} if $self->deployment_mode eq 'devel';
 
     my $type = 'nntp_group_page'; 
 
     unless ($setup->{group_name}) {
-        return { type => $type,
-                 id   => '_group_list_',
+        return { type   => $type,
+                 id     => '_group_list_',
+                 expire => 3600 * 6, # cache groups page for 6 hours 
              };
     }
 

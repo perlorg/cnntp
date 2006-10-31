@@ -8,6 +8,8 @@ group list:
 
 article list (in a group):
   - rss and atom feeds
+  - parse attachments
+    - http://cnntp-dev.askask.com/group/perl.perl5.porters/2006/10/msg117170.html
   - show all messages, "not threaded"
   - show threads by first message in addition to by last message 
 
@@ -16,5 +18,7 @@ article view:
     - flat? nested?
 
   - "next/previous thread" links
+
+  - search by message-id
 
 
