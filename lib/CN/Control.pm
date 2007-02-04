@@ -4,11 +4,26 @@ use base qw(Combust::Control Combust::Control::Bitcard);
 use Apache::Constants qw(OK);
 use Email::Address;
 
+# use Devel::GC::Helper;
+
 sub init {
     my $self = shift;
 
     # should maybe just do this every N requests
     Email::Address->purge_cache;
+
+    # $self->r->register_cleanup(
+    #                                 sub {
+    #                                     warn "getting leaks";
+    #                                     my $leaks = eval { Devel::GC::Helper::sweep; } || [];
+    #                                     warn $@ if $@;
+    #                                     warn "got leaks";
+    #                                     for my $leak (@$leaks) {
+    #                                         warn "Leaked $leak";
+    #                                     }
+    #                                     return 1;
+    #                                 }
+    #                                 );
 
     return OK;
 }

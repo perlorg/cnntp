@@ -1,9 +1,13 @@
 package CN::Control::Group;
 use strict;
 use base qw(CN::Control);
-use Apache::Constants qw(OK);
+use Apache::Constants qw(OK NOT_FOUND);
 use CN::Model;
 use POSIX qw(ceil);
+use XML::RSS;
+use XML::Atom::Feed;
+use XML::Atom::Entry;
+$XML::Atom::DefaultVersion = '1.0';
 
 sub request_setup {
     my $self = shift;
@@ -40,17 +44,16 @@ sub request_setup {
        );
     }
 
-    my $feed_format = '';
+    my ($feed_format, $feed_type);
     unless ($group_name) {
-        ($group_name, $feed_format) = 
+        ($group_name, $feed_format, $feed_type) = 
         ($self->request->uri =~
          m!^/group/([^/]+)
-          /(rss|atom)
+          /(rss|atom)/(threads|posts)
           \.xml$
          !x
        );
     }
-
 
     unless ($group_name) {
         ($group_name, $article) = 
@@ -76,6 +79,7 @@ sub request_setup {
                               article    => $article || 0,
                               page       => $page    || 1,
                               feed_format=> $feed_format || '',
+                              feed_type  => $feed_type || '',
                               version    => $page_version,
                             };
 }
@@ -128,7 +132,9 @@ sub cache_info {
 
     return {
             type => $type,
-            id   => join ";", map { "$_=" . (defined $setup->{$_} ? $setup->{$_} : '__undef__') } qw(version group_name year month page article feed_format),
+            id   => join ";",
+                     map { "$_=" . (defined $setup->{$_} ? $setup->{$_} : '__undef__') }
+                      qw(version group_name year month page article feed_format feed_type),
            }
 
 }
@@ -206,7 +212,6 @@ sub render_group {
 
     $Rose::DB::Object::Manager::Debug = 0;
 
-
     $self->tpl_param('previous_month' => $group->previous_month($month_obj));
     $self->tpl_param('next_month'     => $group->next_month($month_obj));
 
@@ -247,17 +252,78 @@ sub render_feed {
     my $group = $self->group;
     my $setup = $self->request_setup;
 
+    my $feed_format = $setup->{feed_format};
+    my $feed_type   = $setup->{feed_type};
+
     my $articles = CN::Model->article->get_articles
         (  query => [ group_id => $group->id,
                     ],
            limit => 40,
-           group_by => 'thread_id',
+           ($feed_type eq 'threads' ? (group_by => 'thread_id') : ()),
            sort_by => 'id desc',
-         );
+        );
 
-    
+    my $base_url = $self->config->base_url('cnntp');
 
-    return OK, ' foo ';
+    my @entries = map {
+        my $msg_count;
+        if ($feed_type eq 'threads') {
+            $msg_count = $_->thread_count;
+        }
+        +{ link   => $base_url . $_->uri,
+           title  => $_->h_subject_parsed 
+                        . ($feed_type eq 'posts'
+                            ? " by " . $_->author_name 
+                            : " ($msg_count message" . ($msg_count > 1 ? "s" : "") . ")" ),
+           body   => $_->body_html,
+           author => ($feed_type eq 'posts' ? $_->author_name : join(", ", $_->thread->authors(4))),
+           date   => $_->received,
+        } 
+    } @$articles;
+
+    my $feed_title     = $group->name;
+    my $feed_link      = $base_url . $group->uri;
+    my $feed_copyright = 'Copyright 1998-' . DateTime->now->year . ' perl.org';
+
+    if ($feed_format eq 'rss') {
+        my $rss = XML::RSS->new(version => '2.0');
+        $rss->channel(title       => $feed_title,
+                      link        => $feed_link,
+                      description => '...',
+                      pubDate     => DateTime->now->strftime("%a, %d %b %Y %H:%M:%S %z"),
+                      webMaster   => 'ask@perl.org',
+                      copyright   => $feed_copyright,
+                     );
+        for my $entry (@entries) {
+            $rss->add_item(title       => $entry->{title},
+                           permaLink   => $entry->{link},
+                           description => $entry->{body},
+                           pubDate     => $entry->{date}->strftime("%a, %d %b %Y %H:%M:%S %z"),
+                          );
+        }
+        return OK, $rss->as_string, 'application/rss+xml';
+
+    }
+    elsif ($feed_format eq 'atom') {
+        my $feed = XML::Atom::Feed->new;
+        $feed->title($feed_title);
+        $feed->id($feed_link);
+        for my $entry (@entries) {
+            my $e = XML::Atom::Entry->new;
+            $e->title($entry->{title});
+            $e->content("<p>From: " . $entry->{author} . "\n\n" . $entry->{body} . '</p>');
+            $e->issued($entry->{date}->iso8601 . 'Z');
+            my $link = XML::Atom::Link->new;
+            $link->type('text/html');
+            $link->rel('alternate');
+            $link->href($entry->{link});
+            $e->add_link($link);
+            $feed->add_entry($e);
+        }
+        return OK, $feed->as_xml, 'application/atom+xml'
+    }
+
+    return NOT_FOUND;
 }
 
 sub render_article {

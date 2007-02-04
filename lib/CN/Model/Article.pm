@@ -5,6 +5,8 @@ use Email::Address;
 use CN::NNTP;
 use Email::MIME;
 use CN::Model::Thread;
+use Combust::Cache;
+use HTML::Entities qw(encode_entities);
 
 sub uri {
     my $self = shift;
@@ -33,6 +35,12 @@ sub thread {
     return $self->{_thread} if $self->{_thread};
     $self->{_thread} = CN::Model::Thread->new($self->group, $self->thread_id);
 }
+
+#sub DESTROY {
+#    my $self = shift;
+#    warn("DESTROY ", ref $self, "\n");
+#}
+
 
 sub previous_in_thread {
     my $self = shift;
@@ -128,6 +136,7 @@ sub email {
     my $self = shift;
     return $self->{_article_parsed} if $self->{_article_parsed};
     if (my $data = $cache->fetch(id => join(";", 1, $self->group->id, $self->id))) {
+        #warn Data::Dumper->Dump([\$data], [qw(email_data)]);
         return $data->{data};
     }
     my $nntp = CN::NNTP->nntp;
@@ -136,6 +145,7 @@ sub email {
     $nntp->group($self->group->name);
     my $article = $nntp->article($self->id);
     my $email = Email::MIME->new(join "", @$article);
+    #warn Data::Dumper->Dump([\$email], [qw(email)]);
     $cache->store(data => $email, expires => 86400*6*30); # cache for 6 months
     $self->{_article_parsed} = $email;
 }
@@ -163,6 +173,13 @@ sub body {
         }
         
     }
+    $body;
+}
+
+sub body_html {
+    my $self = shift;
+    my $body = encode_entities($self->body);
+    $body =~ s!\n!<br/>!g;
     $body;
 }
 

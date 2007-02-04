@@ -19,6 +19,12 @@ sub uri {
     }
     my $url = join "/", '', 'group', $self->name, "";
 
+    my $feed_format = $args->{feed_format};
+    my $feed_type   = $args->{feed_type};
+    if ($feed_format and $feed_type) {
+        return sprintf("%s%s/%s.xml", $url, $feed_format, $feed_type);
+    }
+
     if ($args->{year}) {
         return sprintf("%s%04d.html",
                        $url,  

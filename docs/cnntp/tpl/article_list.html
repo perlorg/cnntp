@@ -1,4 +1,11 @@
-[% page.title = group.name _ ' archive' %]
+[% page.title = group.name _ ' archive'
+   page.alternate = [
+     { type => 'application/atom+xml', title => 'Atom Feed for Posts',   url => group.uri(feed_format => 'atom', feed_type => 'posts')   }
+     { type => 'application/atom+xml', title => 'Atom Feed for Threads', url => group.uri(feed_format => 'atom', feed_type => 'threads') }
+     { type => 'application/rss+xml', title => 'RSS Feed for Posts',     url => group.uri(feed_format => 'rss',  feed_type => 'posts')   }
+     { type => 'application/rss+xml', title => 'RSS Feed for Threads',   url => group.uri(feed_format => 'rss',  feed_type => 'threads') }
+   ]
+ %]
 
 <a href="/group/">Group list</a>
 
@@ -30,7 +37,7 @@ Postings from [% next_month.strftime("%B %Y") %]</a>
 <table class="article_list" cellpadding=0 cellspacing=0>
 [% i = 0 %]
 [% FOR article = articles %]
-<tr class="[% i = i + 1; (i mod 2) ? 'li_1' : 'li_2' %]">
+<tr valign="top" class="[% i = i + 1; (i mod 2) ? 'li_1' : 'li_2' %]">
 <td><a href="[% article.uri %]">[% article.h_subject_parsed | html %]</a></td>
 <td width="130">[% article.thread_count %] <span class="lighter">message[% article.thread_count > 1 ? 's' : '' %]</span></td>
 <td width="250" class="small">[%# article.author_name | html %]

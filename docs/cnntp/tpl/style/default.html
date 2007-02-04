@@ -6,6 +6,10 @@
 <head>
 <title>[% page.title ? page.title _ ' - ' : '' | html %] nntp.perl.org</title>
 <link rel="stylesheet" type="text/css" href="/css/cnntp.css" title="Default CSS2" media="screen">
+[% FOR alt = page.alternate %]
+    <link rel="alternate" type="[% alt.type %]" title="[% alt.title %]" href="[% alt.url %]" />
+[% END %]
+
 </head>
 
 <body bgcolor="white"> 
