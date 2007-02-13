@@ -4,6 +4,7 @@ use base qw(CN::Control);
 use Apache::Constants qw(OK NOT_FOUND);
 use CN::Model;
 use POSIX qw(ceil);
+use Digest::MD5 qw(md5_hex);
 use XML::RSS;
 use XML::Atom::Feed;
 use XML::Atom::Entry;
@@ -62,6 +63,14 @@ sub request_setup {
                                               $)?!x);
     }
 
+    unless ($group_name) {
+        ($group_name, $article) = 
+            ($self->request->uri =~ m!^/group(?:/([^/]+)
+                                              (?:/;(msgid=.*)?)?
+                                              $)?!x);
+    }
+
+
     # redirect /2006/09/ to /2006/09.html 
     if ($self->request->uri =~ m!^/(group/[^/]+)/(\d{4})/(\d{2})/?$!) {
         die { redirect => "/$1/$2/$3.html" }
@@ -100,7 +109,7 @@ sub render {
         my $group = CN::Model->group->fetch(name => $req->{group_name});
         return 404 unless $group;
         if ($req->{article}) {
-            return $self->redirect_article($group, $req->{article}) unless $req->{year}; 
+            return $self->redirect_article unless $req->{year}; 
             return $self->render_article;
         }
         return $self->render_feed($group)  if $req->{feed_format};
@@ -355,14 +364,29 @@ sub redirect_article {
     my $self = shift;
     my $req = $self->request_setup;
 
-    my $article = CN::Model->article->fetch(group_id => $self->group->id,
-                                            id       => $req->{article}
-                                            );
+    my $article;
+
+    if ($req->{article} =~ m/^msgid=(.*)/) {
+        my $msg_id = $1;
+        $msg_id =~ s/\[at\]/@/;
+        my $md5 = md5_hex($msg_id);
+
+        # local $Rose::DB::Object::Debug = $Rose::DB::Object::Manager::Debug = 1;
+
+        $article = CN::Model->article->get_articles
+          (query => [ msgid    => $md5,
+                      group_id => $self->group->id,
+                    ]);
+        $article = $article && $article->[0];
+    }
+
+    $article ||= CN::Model->article->fetch(group_id => $self->group->id,
+                                           id       => $req->{article}
+                                          );
     
     return 404 unless $article;
 
     return $self->redirect($article->uri);
-
 }
 
 sub show_error {
