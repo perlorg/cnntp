@@ -11,7 +11,7 @@
     RewriteEngine on
     #RewriteLog /tmp/rwl.log
     #RewriteLogLevel 3
-    RewriteRule   ^/rss/(.*).rdf /group/$1/rss/posts.xml [L,R=301]
+    RewriteRule   ^/rss/(.*).rdf /group/$1/rss/posts.xml [PT]
 
     <Location />
        SetHandler perl-script
