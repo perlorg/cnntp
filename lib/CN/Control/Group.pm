@@ -34,6 +34,11 @@ sub request_setup {
         $article = $number if $page_type eq 'msg';
     }
 
+    # redirect /group/perl.beginners to /group/perl.beginners/
+    if ($self->request->uri =~ m!^/(group/[^/]+)$!) {
+        die { redirect => "/$1/" }
+    }
+
     unless ($group_name) {
         ($group_name, $year, $month) = 
         ($self->request->uri =~
@@ -70,7 +75,6 @@ sub request_setup {
                                               $)?!x);
     }
 
-
     # redirect /2006/09/ to /2006/09.html 
     if ($self->request->uri =~ m!^/(group/[^/]+)/(\d{4})/(\d{2})/?$!) {
         die { redirect => "/$1/$2/$3.html" }
@@ -99,7 +103,7 @@ sub render {
     my $req = eval { $self->request_setup };
     if (my $err = $@) {
         return 500 unless ref $err;
-        return $self->redirect($err->{redirect}) if $err->{redirect};
+        return $self->redirect($err->{redirect}, 'perm') if $err->{redirect};
         return 404 if $err->{status} and $err->{status} == 404;
         return $self->show_error($err->{message});
     }
@@ -386,7 +390,7 @@ sub redirect_article {
     
     return 404 unless $article;
 
-    return $self->redirect($article->uri);
+    return $self->redirect($article->uri, 'perm');
 }
 
 sub show_error {
