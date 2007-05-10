@@ -1,0 +1,30 @@
+[% page.title = "perl.* USENET hierarchy" %]
+
+<body>
+<h1>perl.*</h1>
+<h2>Maintenance of the perl.* USENET hierarchy</h2>
+
+<p>
+Controlmessages for the perl.* hierarchy will be signed with PGP. The
+<a href="newsadmin@perl.org.pgp">following key</a> will be used to
+sign these messages:
+</p>
+
+<blockquote>
+<pre>
+Type  Bits/KeyID     Date 
+pub   2048R/8B2ACFBB 2007-05-02
+      Key fingerprint = 438F D1BA 4DCC 3B1A BED8  2BCC 3298 8A7D 8B2A CFBB
+uid                  newsadmin@perl.org
+
+[% INCLUDE "newsadmin@perl.org.pgp" %]
+</pre>
+</blockquote>
+<p>Please adjust your newsserver to only accept control messages that
+have a valid PGP Signature. If you are using INN as your newssever
+software you can copy the following lines into your <a href="control.ctl">control.ctl</a> file:</p>
+<blockquote>
+<pre>
+[% INCLUDE "control.ctl" %]
+</pre>
+</blockquote>
