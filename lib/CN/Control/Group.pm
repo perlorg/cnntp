@@ -134,20 +134,23 @@ sub cache_info {
     #warn Data::Dumper->Dump([\$setup], [qw(setup)]);
     return {} if $self->deployment_mode eq 'devel';
 
-    my $type = 'nntp_group_page'; 
+    my $type = 'cn_grp_p'; 
 
     unless ($setup->{group_name}) {
         return { type   => $type,
                  id     => '_group_list_',
-                 expire => 3600 * 6, # cache groups page for 6 hours 
+                 expire => 3600 * 4, # cache groups page for 6 hours 
              };
     }
 
     return {
             type => $type,
-            id   => join ";",
-                     map { "$_=" . (defined $setup->{$_} ? $setup->{$_} : '__undef__') }
-                      qw(version group_name year month page article feed_format feed_type),
+            id   => md5_hex
+                     (join ";",
+                      map { "$_=" . (defined $setup->{$_} ? $setup->{$_} : '__undef__') }
+                      qw(version group_name year month page article feed_format feed_type)
+                     ),
+            expire => 3600 * 2, # expire other pages in 2 hours
            }
 
 }
