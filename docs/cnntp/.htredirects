@@ -1,3 +1,5 @@
 / /group/
 /about/todo /about/todo.html perm
 /about/index /about/ perm
+/group/index /group/ perm
+/index / perm

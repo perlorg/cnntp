@@ -130,7 +130,7 @@ sub author_name {
     $name;
 }
 
-my $cache = Combust::Cache->new(type => 'nntp_article_email');
+my $cache = Combust::Cache->new(type => 'cn_art_em');
 
 sub email {
     my $self = shift;
@@ -178,7 +178,7 @@ sub body {
 
 sub body_html {
     my $self = shift;
-    my $body = encode_entities($self->body);
+    my $body = encode_entities($self->body) || '';
     $body =~ s!\n!<br/>!g;
     $body;
 }
