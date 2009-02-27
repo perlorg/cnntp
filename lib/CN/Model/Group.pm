@@ -1,7 +1,10 @@
 package CN::Model::Group;
 use strict;
+use Combust::Cache;
 
 # select count(*) from header where grp = 60 and received > DATE_SUB(NOW(), INTERVAL 56 DAY);
+
+my $cache = Combust::Cache->new(type => 'group_info');
 
 sub uri {
     my $self = shift;
@@ -70,15 +73,22 @@ sub list {
 sub previous_month {
     my ($group, $month_obj) = @_;
 
+    if (my $data = $cache->fetch(id => join(":", "previous_month", $group->id, $month_obj->ymd))) {
+      return $data->{data};
+    }
+
     my $article = CN::Model->article->get_articles
         (  query => [ group_id => $group->id,
                       received => { lt => $month_obj },
                       ],
            limit => 1,
            sort_by => 'id desc',
-           );
+	);
     $article = $article && $article->[0];
-    $article ? $article->received : undef;
+    my $rv = $article ? $article->received : undef;
+    $cache->store(data => $rv, expire => 86400 * 60);
+
+    return $rv;
 }
 
 sub next_month {
@@ -98,11 +108,19 @@ sub next_month {
 sub get_recent_articles_count {
     my $self = shift;
     return $self->{_recent_count} if defined $self->{_recent_count};
+
+    my $date = DateTime->now->subtract(months => 2);
+
+    if (my $data = $cache->fetch(id => join(":", 'recent_count', $self->id, $date->ymd))) {
+	return $data->{data};
+    }
+
     my $count = CN::Model->article->get_articles_count
         (query => [ group_id  => $self->id,
-                    received  => { gt => DateTime->now->subtract(months => 2) }
+                    received  => { gt => $date }
                     ],
          );
+    $cache->store(data => $count, expire => 86400 * 5 );
     $self->{_recent_count} = $count;
 }
 
