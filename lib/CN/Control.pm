@@ -36,6 +36,22 @@ sub bc_info_required {
     'username,email';
 }
 
+sub post_process {
+    my $self = shift;
+
+    my $req = $self->request;
+
+    if ($self->no_cache) {
+        $req->header_out('Cache-Control', 'no-cache,max-age=0,private');
+        $req->header_out('Pragma',        'no-cache');
+    }
+    else {
+        $req->header_out('Cache-Control', 'max-age=43200');
+    }
+
+    return OK;
+}
+
 
 package CN::Control::Basic;
 use base qw(CN::Control Combust::Control::Basic);

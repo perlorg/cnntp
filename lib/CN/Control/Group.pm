@@ -148,6 +148,9 @@ sub cache_info {
              };
     }
 
+    my $expiration = 7200;
+    $expiration = 86400 if $setup->{group_name} and $setup->{group_name} eq 'perl.cpan.testers';
+
     return {
             type => $type,
             id   => md5_hex
@@ -155,7 +158,7 @@ sub cache_info {
                       map { "$_=" . (defined $setup->{$_} ? $setup->{$_} : '__undef__') }
                       qw(version group_name year month page article feed_format feed_type)
                      ),
-            expire => 3600 * 2, # expire other pages in 2 hours
+            expire => $expiration,
            }
 
 }
@@ -195,6 +198,8 @@ my $captcha = Captcha::reCAPTCHA->new;
 
 sub render_captcha {
     my $self = shift;
+
+    $self->no_cache(1);
 
     if (my $response = $self->req_param('recaptcha_response_field')) {
         my $result = $captcha->check_answer
@@ -239,14 +244,12 @@ sub render_group {
 	    $data->{count} = 1;
 	}
 
-        warn Data::Dumper->Dump([\$data], [qw(data)]);
-
 	$bot_cache->store( data => $data );
 
         my $valid_cookie = $self->cookie('captcha');
-        $valid_cookie = 0 unless $valid_cookie && ($valid_cookie > time - 86400);
+        $valid_cookie = 0 unless $valid_cookie && ($valid_cookie > time - 43200);
 
-	if ($data->{count} >= 2 and !$valid_cookie) {
+	if ($data->{count} >= 4 and !$valid_cookie) {
             return $self->render_captcha;
         }
 
