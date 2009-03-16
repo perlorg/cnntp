@@ -59,7 +59,7 @@ __PACKAGE__->meta->setup(
     h_from       => { type => 'varchar', default => '', length => 255, not_null => 1 },
     h_subject    => { type => 'varchar', default => '', length => 255, not_null => 1 },
     h_references => { type => 'varchar', default => '', length => 255, not_null => 1 },
-    h_lines      => { type => 'scalar', default => '0', length => 8, not_null => 1 },
+    h_lines      => { type => 'integer', default => '0', not_null => 1 },
     h_bytes      => { type => 'integer', default => '0', not_null => 1 },
   ],
 
