@@ -1,0 +1,16 @@
+
+<p>
+To make sure you are not a robot, please <a href="http://recaptcha.net/learnmore.html">help digitize books</a>.
+</p>
+
+<form method="post">
+
+<input type="hidden" name="r" value="[% return_url | html %]">
+
+[% captcha %]
+
+<p><input type="submit" name="Submit" value="Submit"></p>
+      
+</form>
+
+[% no_ads = 1%]

@@ -5,10 +5,14 @@ use Apache::Constants qw(OK NOT_FOUND);
 use CN::Model;
 use POSIX qw(ceil);
 use Digest::MD5 qw(md5_hex);
+use URI;
+use URI::QueryParam;
+use Captcha::reCAPTCHA;
 use XML::RSS;
 use XML::Atom::Feed;
 use XML::Atom::Entry;
 $XML::Atom::DefaultVersion = '1.0';
+use Combust::Cache;
 
 sub request_setup {
     my $self = shift;
@@ -120,6 +124,7 @@ sub render {
         return $self->render_group($group);
     };
     if ($@) {
+        warn "ERROR: $@";
         return $self->show_error($@)
     }
     return @x;
@@ -186,10 +191,66 @@ sub group {
     $self->{group} = CN::Model->group->fetch(name => $self->request_setup->{group_name});
 }
 
+my $captcha = Captcha::reCAPTCHA->new;
+
+sub render_captcha {
+    my $self = shift;
+
+    if (my $response = $self->req_param('recaptcha_response_field')) {
+        my $result = $captcha->check_answer
+          ($self->config->site->{cnntp}->{recaptcha_private},
+           $self->request->remote_ip,
+           $self->req_param('recaptcha_challenge_field'),
+           $response,
+          );
+
+        if ($result->{is_valid}) {
+            $self->cookie('captcha' => time);
+            return $self->redirect($self->request->uri . "?ts=" . time);
+        }
+
+    }
+
+    $self->tpl_param(
+        'captcha' => $captcha->get_html($self->config->site->{cnntp}->{recaptcha_public}));
+
+    return OK, $self->evaluate_template('tpl/captcha.html');
+
+}
+
+my $bot_cache = Combust::Cache->new(type => 'bot', backend => 'memcached');
+
 sub render_group {
     my $self = shift;
 
     my $group = $self->group;
+
+    if ($group->name eq 'perl.cpan.testers') {
+
+	my $ip = $self->request->remote_ip;
+	my $data = $bot_cache->fetch(id => "1;testers;$ip");
+        $data   = $data && $data->{data}; 
+	$data ||= { ts => time, count => 0 };
+
+	$data->{count}++;
+
+	if ( $data->{ts} < time - 86400 * 4 ) {
+	    $data->{ts}    = time;
+	    $data->{count} = 1;
+	}
+
+        warn Data::Dumper->Dump([\$data], [qw(data)]);
+
+	$bot_cache->store( data => $data );
+
+        my $valid_cookie = $self->cookie('captcha');
+        $valid_cookie = 0 unless $valid_cookie && ($valid_cookie > time - 86400);
+
+	if ($data->{count} >= 2 and !$valid_cookie) {
+            return $self->render_captcha;
+        }
+
+    }
 
     my $max = $self->req_param('max') || 0;
 
@@ -267,6 +328,8 @@ sub render_feed {
     my $self  = shift;
     my $group = $self->group;
     my $setup = $self->request_setup;
+
+    return 404 if $group->name eq 'perl.cpan.testers';
 
     my $feed_format = $setup->{feed_format};
     my $feed_type   = $setup->{feed_type};

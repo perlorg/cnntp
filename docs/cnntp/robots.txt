@@ -1,5 +1,3 @@
 User-agent: *
-Disallow: /rss/
 
-# These pages are really expensive.
 Disallow: /group/perl.cpan.testers/
