@@ -14,11 +14,9 @@ sub uri {
         $args = $file;
         $file = undef;
     }
-    else {
-        if (ref $file and $file->isa('DateTime')) {
-            $args->{month} = $file;
-            $file = undef;
-        }
+    if (ref $file and $file->isa('DateTime')) {
+	$args->{month} = $file;
+	$file = undef;
     }
     my $url = join "/", '', 'group', $self->name, "";
 
