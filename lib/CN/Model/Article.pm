@@ -13,6 +13,17 @@ sub uri {
     $self->group->uri($self)
 }
 
+sub msgid_uri {
+	my $self = shift;
+	my $group_uri = $self->group->uri($self->received);
+	return sprintf("%s;msgid=%s", $self->email->message_id);
+}
+
+sub h_msgid {
+	my $self = shift;
+	$self->email->message_id;
+}
+
 sub h_subject_parsed {
     my $self = shift;
     my $subject = $self->h_subject;

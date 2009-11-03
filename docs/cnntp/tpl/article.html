@@ -11,6 +11,7 @@
 <div class="h_name">From:</div> <b>[% article.author_name |html %]</b><br/>
 <div class="h_name">Date:</div> [% article.received.strftime("%B %e, %Y %H:%M") %]<br/>
 <div class="h_name">Subject:</div> [% article.h_subject_parsed | html  %]<br/>
+<div class="h_name">Message ID:</div> <a href="[% article.msgid_uri | html %]">[% article.h_msgid | html %]</a><br/>
 </div>
 
 <pre>
