@@ -1,7 +1,7 @@
 package CN::Control::Group;
 use strict;
 use base qw(CN::Control);
-use Apache::Constants qw(OK NOT_FOUND);
+use Combust::Constant qw(OK NOT_FOUND);
 use CN::Model;
 use POSIX qw(ceil);
 use Digest::MD5 qw(md5_hex);
@@ -171,6 +171,7 @@ sub render_group_list {
     for my $group (@$groups) {
         my $count = $group->get_recent_articles_count;
         my $avg   = $group->get_daily_average;
+	next unless $group->latest_article;
         if ($count == 0 and $group->latest_article->age_seconds > 86400 * 30 * 4) {
             push @{$groups{inactive}}, $group; 
         }

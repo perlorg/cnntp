@@ -1,7 +1,7 @@
 package CN::Control;
 use strict;
 use base qw(Combust::Control Combust::Control::Bitcard);
-use Apache::Constants qw(OK);
+use Combust::Constant qw(OK);
 use Email::Address;
 
 # use Devel::GC::Helper;
