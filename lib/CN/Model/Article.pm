@@ -29,7 +29,7 @@ sub h_msgid {
 sub h_subject_parsed {
     my $self = shift;
     my $subject = $self->h_subject;
-    decode('MIME-Header', $subject);
+    decode('utf-8', $subject, 1);
 }
 
 sub thread_count {
@@ -123,7 +123,7 @@ sub _check_navigation {
 sub h_from_parsed {
     my $self = shift;
     return $self->{_h_from_parsed} if $self->{_h_from_parsed};
-    my $from = decode('MIME-Header', $self->h_from);
+    my $from = decode('utf-8', $self->h_from);
     $self->{_h_from_parsed} = (Email::Address->parse($from))[0];
 }
 
@@ -157,15 +157,19 @@ sub email {
     die "Could not connect to backend NNTP server; please try again later\n" unless $nntp;
     $nntp->group($self->group->name);
     my $article = $nntp->article($self->id);
-    my $email = Email::MIME->new(join "", @$article);
-    #warn Data::Dumper->Dump([\$email], [qw(email)]);
-    $cache->store(data => $email, expires => 86400*6*30); # cache for 6 months
-    $self->{_article_parsed} = $email;
+    if ($article) {
+	my $email = Email::MIME->new(join "", @$article);
+	#warn Data::Dumper->Dump([\$email], [qw(email)]);
+	$cache->store(data => $email, expires => 86400*6*30); # cache for 6 months
+	$self->{_article_parsed} = $email;
+    }
 }
 
 sub body {
     my $self = shift;
     my $email = $self->email;
+
+    return unless $email;
 
     my @parts = $email->parts;
 
