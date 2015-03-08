@@ -1,12 +1,21 @@
 package CN::Model::Article;
 use strict;
-use Encode qw/decode/;
+use Encode;
 use Email::Address;
 use CN::NNTP;
 use Email::MIME;
 use CN::Model::Thread;
 use Combust::Cache;
 use HTML::Entities qw(encode_entities);
+
+sub decode {
+    my ($charset, $octets, $check) = @_;
+    # wide characters?  don't treat it as utf-8.
+    if ($octets =~ /[^\x00-\xFF]/) {
+	Encode::_utf8_off($octets);
+    }
+    return Encode::decode($charset, $octets, $check);
+}
 
 sub uri {
     my $self = shift;
@@ -29,7 +38,7 @@ sub h_msgid {
 sub h_subject_parsed {
     my $self = shift;
     my $subject = $self->h_subject;
-    decode('utf-8', $subject, 1);
+    decode('utf-8', $subject, 0);
 }
 
 sub thread_count {
@@ -123,7 +132,7 @@ sub _check_navigation {
 sub h_from_parsed {
     my $self = shift;
     return $self->{_h_from_parsed} if $self->{_h_from_parsed};
-    my $from = decode('utf-8', $self->h_from);
+    my $from = decode('utf-8', $self->h_from, 0);
     $self->{_h_from_parsed} = (Email::Address->parse($from))[0];
 }
 
@@ -184,7 +193,7 @@ sub body {
         if ($part->content_type and $part->content_type =~ m!text/!) {
             if (my ($charset) = ($part->content_type =~ m/charset="?(.*)"?/)) {
                 $charset =~ s/;.*$//;
-                eval { $body = decode($charset, $body) } if $charset;
+                eval { $body = decode($charset, $body, 0) } if $charset;
             }
             last if $part->content_type =~ m!text/plain!
         }
