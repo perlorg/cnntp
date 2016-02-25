@@ -7,6 +7,7 @@ use Email::MIME;
 use CN::Model::Thread;
 use Combust::Cache;
 use HTML::Entities qw(encode_entities);
+use URI::Escape qw(uri_escape);
 
 sub decode {
     my ($charset, $octets, $check) = @_;
@@ -23,9 +24,8 @@ sub uri {
 }
 
 sub msgid_uri {
-	my $self = shift;
-	my $group_uri = $self->group->uri('');
-	return sprintf("%s;msgid=%s", $group_uri, $self->h_msgid);
+    my $self = shift;
+    $self->group->uri . ';msgid=' . uri_escape($self->h_msgid);
 }
 
 sub h_msgid {
