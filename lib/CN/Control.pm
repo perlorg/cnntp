@@ -52,11 +52,4 @@ sub post_process {
     return OK;
 }
 
-
-package CN::Control::Basic;
-use base qw(CN::Control Combust::Control::Basic);
-
-package CN::Control::Error;
-use base qw(CN::Control Combust::Control::Error);
-
 1;
