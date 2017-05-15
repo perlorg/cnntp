@@ -1,0 +1,4 @@
+[submodule "combust"]
+	path = combust
+	url = https://github.com/abh/combust.git
+	branch = master

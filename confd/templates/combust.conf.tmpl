@@ -1,0 +1,70 @@
+perl = /usr/bin/perl
+servername = cnntp
+port = 8246
+
+# external_port.  Set to a non-zero value to set the port number used
+# for external redirects (301's, 302's)
+external_port = 80
+
+# source ip's allowed to be frontend proxies, where the
+# X-Forwarded-For header is honored.  Defaults to 127.0.0.1. The
+# special option "*" will allow any IP to set the source IP (use only
+# when the httpd is "firewalled in".
+# proxyip_forwarders = 127.0.0.1, 10.15.0.10, 10.15.0.11,
+proxyip_forwarders = 207.171.3.0/27, 10.220.0.0/16, 127.0.0.1
+
+docs_name = docs
+
+# add Apache::Reload to the httpd configuration; good for development! (default 0)
+# 0 = disabled, 1 = enabled, 2 = enabled with debugging on
+apache_reload = 1
+
+# use Template::Timer to insert timing information in the TT output (default 0)
+# template_timer = 1
+
+# path for log files and the httpd.pid file
+# log_path = apache/logs
+
+# path for temporary work files (compiled template cache etc)
+work_path = /tmp
+
+# Gearman Job Servers
+#job_servers = {{ getenv "GEARMAND_SERVICE_HOST" }}:{{ getenv "GEARMAND_SERVICE_PORT" }}
+
+use_cronolog = 0
+
+[database-cnntp]
+# configure database access for use with the db_open() function
+data_source = {{ getenv "db_dsn" }}
+user        = {{ getenv "db_user" }}
+password    = {{ getenv "db_pass" }}
+time_zone   = UTC
+default=1
+
+[database-combust]
+alias = cnntp
+
+# Apache specific configuration
+[apache]
+maxclients          = 5
+keepalive           = On
+keepalivetimeout    = 30
+#startservers        = 2
+#minspareservers     = 1
+#maxspareservers     = 10
+#maxrequestsperchild = 500
+
+
+# Configure sites
+
+{{ $mode := or (getenv "deployment_mode") "test"}}
+
+[cnntp]
+{{ $names := split (or (getenv "web_hostname") "localhost") "," }}
+servername = {{ index $names 0 }}
+{{ if gt (len $names) 1 }}
+aliases = {{ range $names }}{{.}}, {{ end}}
+{{ end }}
+
+deployment_mode = {{ $mode }}
+

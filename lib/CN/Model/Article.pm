@@ -1,6 +1,6 @@
 package CN::Model::Article;
 use strict;
-use Encode;
+use Encode qw();
 use Email::Address;
 use CN::NNTP;
 use Email::MIME;
