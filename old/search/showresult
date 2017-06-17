@@ -1,5 +1,0 @@
-<%args>
- $file
- $rank
- $size
-</%args>
