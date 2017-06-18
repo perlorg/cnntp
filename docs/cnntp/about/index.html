@@ -2,29 +2,11 @@
 
 <h1>About this site</h1>
 
-<p> 
-
-nntp.perl.org was created by <a href="http://askask.com/">Ask
-Bj&oslash;rn Hansen</a>.
-
-</p>
-
-<p> The site is built with
-<a href="http://httpd.apache.org/">Apache</a>,
-<a href="http://perl.apache.org/">mod_perl</a>, 
-<a href="http://combust.develooper.com/">Combust</a>,
-<a href="http://trainedmonkey.com/colobus/">colobus</a> and
-<a href="http://search.cpan.org/search?dist=libnet">Net::NNTP</a>.
-
-</p>
-
 <p>
-A bit of Perl code is using Net::NNTP to connect to the colobus
-server which uses the perl.org ezmlm archives as the "news spool".
-</p>
-
-<p>
-The code is available from Subversion at <a href="https://svn.develooper.com/projects/cnntp/">https://svn.develooper.com/projects/cnntp/</a>.
+This site is <a href="https://github.com/perlorg/cnntp">a bit of Perl code</a>
+using <a href="http://search.cpan.org/search?dist=libnet">Net::NNTP</a>
+to connect to the <a href="https://github.com/abh/colobus">colobus server</a>
+which uses the perl.org ezmlm archives as the "news spool".
 </p>
 
 <p>
@@ -35,6 +17,21 @@ The code is available from Subversion at <a href="https://svn.develooper.com/pro
 
 Updates:
 <pre>
+2017
+  Docker container (site now runs in kubernetes)
+
+2015
+  Fix, maybe, charset issues. Encoding is hard.
+
+2009
+  Fix Message-ID links (thanks Aristotle Pagaltzis)
+  Require a captcha to browse cpan-testers
+  Various performance improvements
+
+2007
+  RSS and Atom feeds
+  Link by msgid
+
 2006 October
   All new code! :-)
 
