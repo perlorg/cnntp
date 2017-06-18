@@ -31,6 +31,11 @@ work_path = /tmp
 # Gearman Job Servers
 #job_servers = {{ getenv "GEARMAND_SERVICE_HOST" }}:{{ getenv "GEARMAND_SERVICE_PORT" }}
 
+{{ $mc := getenv "memcached_servers" }}
+{{ if $mc }}
+memcached_servers = {{ $mc }}
+{{ end }}
+
 use_cronolog = 0
 
 [database-cnntp]

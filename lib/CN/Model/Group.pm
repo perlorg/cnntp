@@ -4,7 +4,7 @@ use Combust::Cache;
 
 # select count(*) from header where grp = 60 and received > DATE_SUB(NOW(), INTERVAL 56 DAY);
 
-my $cache = Combust::Cache->new(type => 'group_info');
+my $cache = Combust::Cache->new(type => 'group_info', backend => 'memcached');
 
 sub uri {
     my $self = shift;

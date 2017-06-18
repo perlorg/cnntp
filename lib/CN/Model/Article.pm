@@ -152,7 +152,7 @@ sub author_name {
     $name;
 }
 
-my $cache = Combust::Cache->new(type => 'cn_art_em');
+my $cache = Combust::Cache->new(type => 'cn_art_em', backend => 'memcached');
 
 sub email {
     my $self = shift;
