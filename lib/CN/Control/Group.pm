@@ -142,17 +142,19 @@ sub cache_info {
     my $type = 'cn_grp_p'; 
 
     unless ($setup->{group_name}) {
-        return { type   => $type,
-                 id     => '_group_list_',
-                 expire => 3600 * 4, # cache groups page for 6 hours 
+        return { type    => $type,
+                 backend => "memcached",
+                 id      => '_group_list_',
+                 expire  => 3600 * 2, # cache groups page for 2 hours
              };
     }
 
-    my $expiration = 7200;
+    my $expiration = 900;
     $expiration = 86400 if $setup->{group_name} and $setup->{group_name} eq 'perl.cpan.testers';
 
     return {
             type => $type,
+            backend => "memcached",
             id   => md5_hex
                      (join ";",
                       map { "$_=" . (defined $setup->{$_} ? $setup->{$_} : '__undef__') }

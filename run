@@ -4,5 +4,3 @@ confd -onetime -confdir=confd -backend env
 export CBCONFIG=/tmp/combust.conf
 
 exec combust/bin/httpd
-
-
