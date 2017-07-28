@@ -1,4 +1,4 @@
-FROM quay.io/ntppool/base-os:v2.1
+FROM quay.io/ntppool/base-os:v2.2
 
 USER root
 ENV CBCONFIG=
