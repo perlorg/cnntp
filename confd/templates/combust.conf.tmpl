@@ -4,7 +4,10 @@ port = 8246
 
 # external_port.  Set to a non-zero value to set the port number used
 # for external redirects (301's, 302's)
-external_port = 80
+{{ $external_port := getenv "external_port" }}
+{{ if $external_port }}
+external_port = {{ $external_port }}
+{{ end }}
 
 # source ip's allowed to be frontend proxies, where the
 # X-Forwarded-For header is honored.  Defaults to 127.0.0.1. The
