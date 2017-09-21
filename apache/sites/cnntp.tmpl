@@ -8,11 +8,6 @@
 
     PerlModule CN
 
-    RewriteEngine on
-    #RewriteLog /tmp/rwl.log
-    #RewriteLogLevel 3
-    RewriteRule   ^/rss/(.*).rdf /group/$1/rss/posts.xml [PT]
-
     <Location />
        SetHandler perl-script
        PerlHandler CN::Control::Basic->super
