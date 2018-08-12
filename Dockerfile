@@ -1,9 +1,9 @@
-FROM quay.io/ntppool/base-os:v2.2
+FROM quay.io/perl/base-os:v3.3
 
 USER root
 ENV CBCONFIG=
 
-RUN apk update; apk add libxml2-dev
+RUN apk update; apk upgrade apk-tools; apk upgrade; apk add libxml2-dev
 
 ENV CBROOTLOCAL=/cnntp/
 ENV CBROOT=/cnntp/combust
