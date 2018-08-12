@@ -81,7 +81,11 @@ font-size: 60%;
 
 <p>
 [% FOR group = groups.active %]
-<a href="[% group.uri %]">[% group.name %]</a> ([% group.get_daily_average | round(0) %] per day)<br/>
+<a href="[% group.uri %]">[% group.name %]</a>
+[% IF group.get_daily_average > 0.5 %]
+([% group.get_daily_average | round(0) %] per day)
+[% END %]
+<br/>
 [% END %]
 </p>
 

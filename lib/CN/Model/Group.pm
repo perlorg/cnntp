@@ -107,7 +107,7 @@ sub get_recent_articles_count {
     my $self = shift;
     return $self->{_recent_count} if defined $self->{_recent_count};
 
-    my $date = DateTime->now->subtract(months => 2);
+    my $date = DateTime->now->subtract(months => 3);
 
     if (my $data = $cache->fetch(id => join(":", 'recent_count', $self->id, $date->ymd))) {
 	return $data->{data};
@@ -125,7 +125,7 @@ sub get_recent_articles_count {
 sub get_daily_average {
     my $self = shift;
     my $count = $self->get_recent_articles_count;
-    $count / 60; 
+    $count / 90;
 }
 
 sub latest_article {
