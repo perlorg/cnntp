@@ -174,11 +174,11 @@ sub render_group_list {
         my $count = $group->get_recent_articles_count;
         my $avg   = $group->get_daily_average;
 	next unless $group->latest_article;
-        if ($count == 0 and $group->latest_article->age_seconds > 86400 * 30 * 4) {
+        if ($count == 0 and $group->latest_article->age_seconds > 86400 * 30 * 6) {
             push @{$groups{inactive}}, $group; 
         }
         else {
-            if ($avg > .4) {
+            if ($avg > .1) {
                 push @{$groups{active}}, $group; 
             }
             else {
