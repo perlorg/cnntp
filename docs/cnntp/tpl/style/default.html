@@ -9,6 +9,7 @@
 [% FOR alt = page.alternate %]
     <link rel="alternate" type="[% alt.type %]" title="[% alt.title %]" href="[% alt.url %]" />
 [% END %]
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
 [%- IF siteconfig.googleanalytics %]
 <script>
