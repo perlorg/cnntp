@@ -1,6 +1,6 @@
 package CN::Control;
 use strict;
-use base qw(Combust::Control Combust::Control::Bitcard);
+use base qw(Combust::Control);
 use Combust::Constant qw(OK);
 use Email::Address;
 
@@ -26,14 +26,6 @@ sub init {
     #                                 );
 
     return OK;
-}
-
-sub bc_user_class {
-  'CN::User';
-}
-
-sub bc_info_required {
-    'username,email';
 }
 
 sub post_process {
