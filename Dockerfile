@@ -14,10 +14,13 @@ CMD ./run
 
 RUN addgroup cnntp && adduser -D -G cnntp cnntp
 
+# Alpine is missing some locale stuff so Number::Format fails some tests
+RUN cpanm -f Number::Format
+
 RUN cpanm Email::MIME Captcha::reCAPTCHA \
   XML::RSS XML::Atom::Feed XML::Atom::Entry \
   Email::Address Net::NNTP Email::Abstract \
-  DateTime::Locale
+  DateTime::Locale Template::Plugin::Number::Format
 
 ADD . /cnntp
 
