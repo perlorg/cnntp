@@ -48,6 +48,7 @@ data_source = {{ getenv "db_dsn" }}
 user        = {{ getenv "db_user" }}
 password    = {{ getenv "db_pass" }}
 time_zone   = UTC
+post_connect_sql = "SET session sql_mode=(SELECT REPLACE(@@sql_mode,'ONLY_FULL_GROUP_BY',''));"
 default=1
 
 [database-combust]
