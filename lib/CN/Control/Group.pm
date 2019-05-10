@@ -114,6 +114,11 @@ sub render {
 
     my @x = eval { 
         return $self->render_group_list unless $req->{group_name};
+
+        unless (CN::Model->dbh->ping) {
+            warn "Ping failed?!";
+        }
+
         my $group = CN::Model->group->fetch(name => $req->{group_name});
         return 404 unless $group;
         if ($req->{article}) {

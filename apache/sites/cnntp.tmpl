@@ -18,9 +18,9 @@
        PerlHandler CN::Control::Group->super
     </Location>
 
-    #<Location /logout>
-    #   SetHandler perl-script
-    #   PerlHandler CN::Control::Logout->super
-    #</Location>
+    <Location /_health>
+       SetHandler perl-script
+       PerlHandler CN::Control::Health->super
+    </Location>
 
   </VirtualHost>
