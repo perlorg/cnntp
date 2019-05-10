@@ -6,7 +6,7 @@ my $nntp;
 sub nntp {
     $nntp = undef unless $nntp and $nntp->date;
 
-    my $SERVER = 'x6.dev';
+    my $SERVER = 'nntp.perl.org';
     unless ($nntp) {
         $nntp = Net::NNTP->new($SERVER, Timeout => 10, Debug => 0 )
           or $nntp = Net::NNTP->new($SERVER, Timeout => 10, Debug => 0 )
