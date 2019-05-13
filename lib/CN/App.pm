@@ -7,8 +7,11 @@ with 'Combust::Redirect';
 use CN::Model;
 use CN::Control;
 use Combust::Cache;
+use Combust::Logger qw(logconfig);
 
 $Combust::Cache::namespace .= '.v2';
+
+logconfig(verbose => 5, saywarn => 1);
 
 1;
 
