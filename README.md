@@ -13,6 +13,12 @@ appropriate.
 
 In production this runs under kubernetes.
 
+## Memcached
+
+```
+docker run --name memcached_combust  -p 11211:11211 --rm memcached
+```
+
 ## Database
 
 To use this you need a [colobus](https://github.com/abh/colobus)
