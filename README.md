@@ -7,9 +7,12 @@ To run it locally, copy cnntp.env.sample to cnntp.env and edit as
 appropriate.
 
     docker run -p 8246:8246 --rm -it \
+      --name cnntp \
       -v `pwd`:/cnntp \
       --env-file cnntp.env \
       quay.io/perl/cnntp:latest
+
+You may need `--net=host` depending on where your database is.
 
 In production this runs under kubernetes.
 
