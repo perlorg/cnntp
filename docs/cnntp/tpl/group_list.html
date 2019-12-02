@@ -22,7 +22,6 @@ div.searchbox {
 </div>
 
 <h2>Active lists</h2>
-
 <p>
 [% FOR group = groups.active %]
 <a href="[% group.uri %]">[% group.name %]</a>
@@ -33,50 +32,53 @@ div.searchbox {
 [% END %]
 </p>
 
+[% IF groups.slow.size > 0 %]
 <h2>Slow lists</h2>
 <table>
 [% FOR group = groups.slow %]
-<tr><td>
-<a href="[% group.uri %]">[% group.name %]</a></td>
-<td>
+<tr>
+  <td><a href="[% group.uri %]">[% group.name %]</a></td>
+  <td>
 [% latest_article = group.latest_article;
    IF latest_article; %]
-[% #USE Dumper; Dumper.dump_html(latest_article) %]
-<span style="color:grey;">Last post</span> [% latest_article.received.strftime("%B %Y") %]
+    <span style="color:grey;">Last post</span> [% latest_article.received.strftime("%B %Y") %]
 [% END; %]
-</td>
+  </td>
 </tr>
 [% END %]
 </table>
+[% END %]
 
+[% IF groups.inactive.size > 0 %]
 <h2>Inactive lists</h2>
 <table>
 [% FOR group = groups.inactive %]
-<tr><td>
-<a href="[% group.uri %]">[% group.name %]</a></td>
-<td>
+<tr>
+  <td><a href="[% group.uri %]">[% group.name %]</a></td>
+  <td>
 [% latest_article = group.latest_article;
    IF latest_article; %]
-[% #USE Dumper; Dumper.dump_html(latest_article) %]
-<span style="color:grey;">Last post</span> [% latest_article.received.strftime("%B %Y") %]
+    <span style="color:grey;">Last post</span> [% latest_article.received.strftime("%B %Y") %]
 [% END; %]
-</td>
+  </td>
 </tr>
 [% END %]
 </table>
+[% END %]
 
+[% IF groups.archived.size > 0 %]
 <h2>Archived lists</h2>
 <table>
 [% FOR group = groups.archived %]
-<tr><td>
-<a href="[% group.uri %]">[% group.name %]</a></td>
-<td>
+<tr>
+  <td><a href="[% group.uri %]">[% group.name %]</a></td>
+  <td>
 [% latest_article = group.latest_article;
    IF latest_article; %]
-[% #USE Dumper; Dumper.dump_html(latest_article) %]
-<span style="color:grey;">Last post</span> [% latest_article.received.strftime("%B %Y") %]
-</td>
+    <span style="color:grey;">Last post</span> [% latest_article.received.strftime("%B %Y") %]
+  </td>
 </tr>
 [% END; %]
 [% END %]
 </table>
+[% END %]
