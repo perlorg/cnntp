@@ -77,4 +77,5 @@ aliases = {{ range $names }}{{.}}, {{ end}}
 {{ end }}
 
 deployment_mode = {{ $mode }}
+archived_groups = {{ getenv "archived_groups" }}
 

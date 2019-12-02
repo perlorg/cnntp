@@ -174,22 +174,34 @@ sub render_group_list {
     my $self = shift;
     my $groups = CN::Model->group->get_groups;
 
+    my $archived_groups = $self->config->site->{'cnntp'}->{archived_groups};
+    my %archived;
+    for (@$archived_groups) {
+        $archived{$_}++;
+    }
+
     my %groups;
     for my $group (@$groups) {
         my $count = $group->get_recent_articles_count;
         my $avg   = $group->get_daily_average;
-	next unless $group->latest_article;
-        if ($count == 0 and $group->latest_article->age_seconds > 86400 * 30 * 12) {
+	    next unless $group->latest_article;
+
+        if ($archived{$group->name}) {
+            push @{$groups{archived}}, $group;
+        }
+        elsif ($count == 0 and $group->latest_article->age_seconds > 86400 * 30 * 12) {
             push @{$groups{inactive}}, $group;
         }
-        else {
-            if ($avg > .05) {
+        elsif ($avg > .05) {
                 push @{$groups{active}}, $group; 
-            }
-            else {
-                push @{$groups{slow}}, $group; 
-            }
         }
+        else {
+           push @{$groups{slow}}, $group; 
+        }
+    }
+
+    for (qw(active archived slow inactive)) {
+        @{$groups{$_}} = sort { $a->latest_article->age_seconds <=> $b->latest_article->age_seconds }  @{$groups{$_}};
     }
 
     $self->tpl_param('groups', \%groups); 

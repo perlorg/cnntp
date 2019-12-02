@@ -34,16 +34,40 @@ div.searchbox {
 </p>
 
 <h2>Slow lists</h2>
-<p>
+<table>
 [% FOR group = groups.slow %]
-<a href="[% group.uri %]">[% group.name %]</a>
-<br/>
+<tr><td>
+<a href="[% group.uri %]">[% group.name %]</a></td>
+<td>
+[% latest_article = group.latest_article;
+   IF latest_article; %]
+[% #USE Dumper; Dumper.dump_html(latest_article) %]
+<span style="color:grey;">Last post</span> [% latest_article.received.strftime("%B %Y") %]
+[% END; %]
+</td>
+</tr>
 [% END %]
-</p>
+</table>
 
 <h2>Inactive lists</h2>
 <table>
 [% FOR group = groups.inactive %]
+<tr><td>
+<a href="[% group.uri %]">[% group.name %]</a></td>
+<td>
+[% latest_article = group.latest_article;
+   IF latest_article; %]
+[% #USE Dumper; Dumper.dump_html(latest_article) %]
+<span style="color:grey;">Last post</span> [% latest_article.received.strftime("%B %Y") %]
+[% END; %]
+</td>
+</tr>
+[% END %]
+</table>
+
+<h2>Archived lists</h2>
+<table>
+[% FOR group = groups.archived %]
 <tr><td>
 <a href="[% group.uri %]">[% group.name %]</a></td>
 <td>
