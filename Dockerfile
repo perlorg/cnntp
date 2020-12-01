@@ -1,4 +1,4 @@
-FROM quay.io/perl/base-os:v3.11.6
+FROM quay.io/perl/base-os:v3.12.1
 
 USER root
 ENV CBCONFIG=
@@ -14,8 +14,13 @@ CMD ./run
 
 RUN addgroup cnntp && adduser -D -G cnntp cnntp
 
-# Alpine is missing some locale stuff so Number::Format fails some tests
-RUN cpanm -f Number::Format
+# - Alpine is missing some locale stuff so Number::Format fails some
+# tests.
+# - XML::Atom doesn't like newer XML-LibXML:
+# https://github.com/miyagawa/xml-atom/issues/18
+RUN cpanm --notest \
+          Number::Format \
+          XML::Atom
 
 RUN cpanm Email::MIME Captcha::reCAPTCHA \
   XML::RSS XML::Atom::Feed XML::Atom::Entry \
