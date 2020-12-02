@@ -28,7 +28,9 @@ RUN cpanm Email::MIME Captcha::reCAPTCHA \
   XML::RSS XML::Atom::Feed XML::Atom::Entry \
   Email::Address Net::NNTP Email::Abstract \
   DateTime::Locale Template::Plugin::Number::Format \
-  Starman
+  Starman Plack::Middleware::XForwardedFor \
+  Plack::Middleware::Options \
+  Plack::Middleware::AccessLog
 
 ADD . /cnntp
 
