@@ -18,14 +18,17 @@ RUN addgroup cnntp && adduser -D -G cnntp cnntp
 # tests.
 # - XML::Atom doesn't like newer XML-LibXML:
 # https://github.com/miyagawa/xml-atom/issues/18
+# - POSIX::strftime::compiler has weird time zone issues on Alpine 3.12
 RUN cpanm --notest \
           Number::Format \
-          XML::Atom
+          XML::Atom \
+          POSIX::strftime::Compiler
 
 RUN cpanm Email::MIME Captcha::reCAPTCHA \
   XML::RSS XML::Atom::Feed XML::Atom::Entry \
   Email::Address Net::NNTP Email::Abstract \
-  DateTime::Locale Template::Plugin::Number::Format
+  DateTime::Locale Template::Plugin::Number::Format \
+  Starman
 
 ADD . /cnntp
 
