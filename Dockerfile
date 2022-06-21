@@ -1,4 +1,4 @@
-FROM quay.io/perl/base-os:v3.12.1
+FROM harbor.ntppool.org/perlorg/base-os:3.16.0
 
 USER root
 ENV CBCONFIG=
