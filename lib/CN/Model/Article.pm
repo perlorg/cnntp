@@ -38,7 +38,7 @@ sub h_msgid {
 sub h_subject_parsed {
     my $self = shift;
     my $subject = $self->h_subject;
-    decode('utf-8', $subject, 0);
+    decode('MIME-Header', $subject, 0);
 }
 
 sub thread_count {
@@ -132,7 +132,7 @@ sub _check_navigation {
 sub h_from_parsed {
     my $self = shift;
     return $self->{_h_from_parsed} if $self->{_h_from_parsed};
-    my $from = decode('utf-8', $self->h_from, 0);
+    my $from = decode('MIME-Header', $self->h_from, 0);
     $self->{_h_from_parsed} = (Email::Address->parse($from))[0];
 }
 
