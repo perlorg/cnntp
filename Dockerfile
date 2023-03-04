@@ -1,4 +1,4 @@
-FROM harbor.ntppool.org/perlorg/base-os:3.16.0
+FROM harbor.ntppool.org/perlorg/base-os:3.17.2
 
 USER root
 ENV CBCONFIG=
