@@ -1,5 +1,7 @@
 FROM harbor.ntppool.org/perlorg/base-os:3.17.2
 
+LABEL org.opencontainers.image.description Colobus NNTP / ezmlm Web Archive publisher
+
 USER root
 ENV CBCONFIG=
 
