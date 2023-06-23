@@ -24,7 +24,9 @@
       link = thread.message.id != article.id;
    %]
     <li>[% IF link %]<!-- #[% thread.message.id %] --><a href="[% thread.message.uri %]">[% ELSE; '<b>'; END %]
-      [% thread.message.h_subject_parsed | html %][% link ? '</a>' : '</b>' %]
+      [% IF thread.message.h_subject_parsed.match('\S'); 
+        thread.message.h_subject_parsed | html %][% ELSE %]A message[% 
+      END %][% link ? '</a>' : '</b>' %]
       by [% thread.message.author_name | html %]</li> [%
    END;
    IF thread.child;
