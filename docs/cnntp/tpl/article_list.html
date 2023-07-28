@@ -38,7 +38,14 @@ Postings from [% next_month.strftime("%B %Y") %]</a>
 [% i = 0 %]
 [% FOR article = articles %]
 <tr valign="top" class="[% i = i + 1; (i mod 2) ? 'li_1' : 'li_2' %]">
-<td><a href="[% article.uri %]">[% article.h_subject_parsed | html %]</a></td>
+<td><a href="[% article.uri %]">
+[%- IF article.h_subject_parsed.match('\S');
+  article.h_subject_parsed | html %]
+[%- ELSE -%]A message
+[%- END %]
+[% article.h_subject_parsed | html -%]
+</a></td>
+
 <td width="130">[% article.thread_count %] <span class="lighter">message[% article.thread_count > 1 ? 's' : '' %]</span></td>
 <td width="250" class="small">[%# article.author_name | html %]
 [% article.thread.authors(4).join(", ") | html %]
