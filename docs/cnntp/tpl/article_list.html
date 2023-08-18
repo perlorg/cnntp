@@ -43,7 +43,6 @@ Postings from [% next_month.strftime("%B %Y") %]</a>
   article.h_subject_parsed | html %]
 [%- ELSE -%]A message
 [%- END %]
-[% article.h_subject_parsed | html -%]
 </a></td>
 
 <td width="130">[% article.thread_count %] <span class="lighter">message[% article.thread_count > 1 ? 's' : '' %]</span></td>
