@@ -1,6 +1,51 @@
+# Nobody should crawl this group
 User-agent: *
 Disallow: /group/perl.cpan.testers/
 
+# Allow well-behaved Googlebot
+User-agent: Googlebot
+Allow: /
+
+# Block unknown bots
+User-agent: *
+Allow: /
+
+# Block known abusive blocks.
 User-agent: Yandex
 Disallow: /
 
+User-agent: Bytespider
+Disallow: /
+
+User-agent: DataForSeoBot
+Disallow: /
+
+User-agent: AhrefsBot
+Disallow: /
+
+User-agent: AhrefsSiteAudit
+Disallow: /
+
+User-agent: SemrushBot
+Disallow: /
+
+User-agent: SiteAuditBot
+Disallow: /
+
+User-agent: SemrushBot-BA
+Disallow: /
+
+User-agent: SemrushBot-SI
+Disallow: /
+
+User-agent: SemrushBot-SWA
+Disallow: /
+
+User-agent: SemrushBot-CT
+Disallow: /
+
+User-agent: SplitSignalBot
+Disallow: /
+
+User-agent: SemrushBot-COUB
+Disallow: /
