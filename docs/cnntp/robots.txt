@@ -1,6 +1,10 @@
-# Nobody should crawl this group
+# Nobody should crawl these groups
 User-agent: *
 Disallow: /group/perl.cpan.testers/
+
+User-agent: *
+Disallow: /group/perl.daily-build.reports/
+
 
 # Allow well-behaved Googlebot
 User-agent: Googlebot
@@ -8,7 +12,6 @@ Allow: /
 
 User-agent: Applebot
 Allow: /
-
 
 # Block known abusive blocks.
 User-agent: Yandex
@@ -50,7 +53,12 @@ Disallow: /
 User-agent: SemrushBot-COUB
 Disallow: /
 
-# Rules for unknown bots
-User-agent: *
-Allow: /
-Disallow: /group/perl.daily-build.reports/
+User-agent: GPTBot
+Disallow: /
+
+User-agent: PetalBot
+Disallow: /
+
+User-agent: DotBot
+Disallow: /
+
