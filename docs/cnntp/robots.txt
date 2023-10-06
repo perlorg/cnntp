@@ -49,3 +49,12 @@ Disallow: /
 
 User-agent: SemrushBot-COUB
 Disallow: /
+
+User-agent: GPTBot
+Disallow: /
+
+User-agent: PetalBot
+Disallow: /
+
+User-agent: DotBot
+Disallow: /
