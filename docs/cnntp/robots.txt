@@ -6,9 +6,9 @@ Disallow: /group/perl.cpan.testers/
 User-agent: Googlebot
 Allow: /
 
-# Block unknown bots
-User-agent: *
+User-agent: Applebot
 Allow: /
+
 
 # Block known abusive blocks.
 User-agent: Yandex
@@ -49,3 +49,8 @@ Disallow: /
 
 User-agent: SemrushBot-COUB
 Disallow: /
+
+# Rules for unknown bots
+User-agent: *
+Allow: /
+Disallow: /group/perl.daily-build.reports/
