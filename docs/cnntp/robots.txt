@@ -5,13 +5,16 @@ Disallow: /group/perl.cpan.testers/
 User-agent: *
 Disallow: /group/perl.daily-build.reports/
 
-
-# Allow well-behaved Googlebot
+# Allow well-behaved bots
 User-agent: Googlebot
 Allow: /
 
 User-agent: Applebot
 Allow: /
+
+# Block all unknown bots
+User-agent: *
+Disallow: /
 
 # Block known abusive blocks.
 User-agent: Yandex
