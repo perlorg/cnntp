@@ -1,4 +1,4 @@
-FROM harbor.ntppool.org/perlorg/base-os:3.18.4
+FROM harbor.ntppool.org/perlorg/base-os:3.20.2
 
 LABEL org.opencontainers.image.description Colobus NNTP / ezmlm Web Archive publisher
 
