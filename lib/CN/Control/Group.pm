@@ -13,24 +13,29 @@ use XML::Atom::Feed;
 use XML::Atom::Entry;
 $XML::Atom::DefaultVersion = '1.0';
 use Combust::Cache;
+use OpenTelemetry::Constants
+  qw( SPAN_KIND_SERVER SPAN_KIND_INTERNAL SPAN_STATUS_ERROR SPAN_STATUS_OK );
+use OpenTelemetry -all;
+use OpenTelemetry::Trace;
+use Syntax::Keyword::Dynamically;
+use experimental qw( defer );
 
 sub request_setup {
     my $self = shift;
-    
+
     return $self->{setup} if $self->{setup};
 
     # increment this to invalidate all the pages cached
     my $page_version = 1;
 
-    my ($group_name, $year, $month, $page_type, $number) = 
-        ($self->request->uri =~
-         m!^/group/([^/]+)
+    my ($group_name, $year, $month, $page_type, $number) = (
+        $self->request->uri =~ m!^/group/([^/]+)
           /([^/]+?)
           /([^/]+?)
           /(msg|page)(\d+)
           \.html$
          !x
-       );
+    );
 
     my ($page, $article) = (0, 0);
     if ($page_type and defined $number) {
@@ -40,65 +45,66 @@ sub request_setup {
 
     # redirect /group/perl.beginners to /group/perl.beginners/
     if ($self->request->uri =~ m!^/(group/[^/]+)$!) {
-        die { redirect => "/$1/" }
+        die {redirect => "/$1/"};
     }
 
     unless ($group_name) {
-        ($group_name, $year, $month) = 
-        ($self->request->uri =~
-         m!^/group/([^/]+)
+        ($group_name, $year, $month) = (
+            $self->request->uri =~ m!^/group/([^/]+)
           /([^/]+?)
           (?:/([^/]+?))?
           \.html$
          !x
-       );
+        );
     }
 
     my ($feed_format, $feed_type);
     unless ($group_name) {
-        ($group_name, $feed_format, $feed_type) = 
-        ($self->request->uri =~
-         m!^/group/([^/]+)
+        ($group_name, $feed_format, $feed_type) = (
+            $self->request->uri =~ m!^/group/([^/]+)
           /(rss|atom)/(threads|posts)
           \.xml$
          !x
-       );
+        );
     }
 
     unless ($group_name) {
-        ($group_name, $article) = 
-            ($self->request->uri =~ m!^/group(?:/([^/]+)
+        ($group_name, $article) = (
+            $self->request->uri =~ m!^/group(?:/([^/]+)
                                               (?:/(\d+)?)?
-                                              $)?!x);
+                                              $)?!x
+        );
     }
 
     unless ($group_name) {
-        ($group_name, $article) = 
-            ($self->request->uri =~ m!^/group(?:/([^/]+)
+        ($group_name, $article) = (
+            $self->request->uri =~ m!^/group(?:/([^/]+)
                                               (?:/;(msgid=.*)?)?
-                                              $)?!x);
+                                              $)?!x
+        );
     }
 
-    # redirect /2006/09/ to /2006/09.html 
+    # redirect /2006/09/ to /2006/09.html
     if ($self->request->uri =~ m!^/(group/[^/]+)/(\d{4})/(\d{2})/?$!) {
-        die { redirect => "/$1/$2/$3.html" }
+        die {redirect => "/$1/$2/$3.html"};
     }
-    
 
     # fail-safe to catch bad urls that just would give us the group
     # index
-    die { status => 404 }
-      unless $group_name or $self->request->uri =~ m!^/group/?$!;
+    die {status => 404}
+      unless $group_name
+      or $self->request->uri =~ m!^/group/?$!;
 
-    return $self->{setup} = { group_name => $group_name || '',
-                              year       => $year    || 0,
-                              month      => $month   || 0,
-                              article    => $article || 0,
-                              page       => $page    || 1,
-                              feed_format=> $feed_format || '',
-                              feed_type  => $feed_type || '',
-                              version    => $page_version,
-                            };
+    return $self->{setup} = {
+        group_name  => $group_name  || '',
+        year        => $year        || 0,
+        month       => $month       || 0,
+        article     => $article     || 0,
+        page        => $page        || 1,
+        feed_format => $feed_format || '',
+        feed_type   => $feed_type   || '',
+        version     => $page_version,
+    };
 }
 
 sub render {
@@ -112,7 +118,14 @@ sub render {
         return $self->show_error($err->{message});
     }
 
-    my @x = eval { 
+    my $span = CN::Tracing->tracer->create_span(
+        name => "group.render",
+        kind => SPAN_KIND_INTERNAL,
+    );
+    dynamically otel_current_context = otel_context_with_span($span);
+    defer { $span->end(); };
+
+    my @x = eval {
         return $self->render_group_list unless $req->{group_name};
 
         unless (CN::Model->dbh->ping) {
@@ -122,56 +135,64 @@ sub render {
         my $group = CN::Model->group->fetch(name => $req->{group_name});
         return 404 unless $group;
         if ($req->{article}) {
-            return $self->redirect_article unless $req->{year}; 
+            return $self->redirect_article unless $req->{year};
             return $self->render_article;
         }
-        return $self->render_feed($group)  if $req->{feed_format};
+        return $self->render_feed($group) if $req->{feed_format};
         return $self->render_group($group);
     };
     if ($@) {
         warn "ERROR: $@";
-        return $self->show_error($@)
+        return $self->show_error($@);
     }
     return @x;
 }
 
-
 sub cache_info {
-    my $self = shift;
+    my $self  = shift;
     my $setup = eval { $self->request_setup };
     return {} unless $setup;
 
     #warn Data::Dumper->Dump([\$setup], [qw(setup)]);
     return {} if $self->deployment_mode eq 'devel';
 
-    my $type = 'cn_grp_p'; 
+    my $type = 'cn_grp_p';
 
     unless ($setup->{group_name}) {
-        return { type    => $type,
-                 backend => "memcached",
-                 id      => '_group_list_',
-                 expire  => 3600 * 2, # cache groups page for 2 hours
-             };
+        return {
+            type    => $type,
+            backend => "memcached",
+            id      => '_group_list_',
+            expire  => 3600 * 2,         # cache groups page for 2 hours
+        };
     }
 
     my $expiration = 900;
     $expiration = 86400 if $setup->{group_name} and $setup->{group_name} eq 'perl.cpan.testers';
 
     return {
-            type => $type,
-            backend => "memcached",
-            id   => md5_hex
-                     (join ";",
-                      map { "$_=" . (defined $setup->{$_} ? $setup->{$_} : '__undef__') }
-                      qw(version group_name year month page article feed_format feed_type)
-                     ),
-            expire => $expiration,
-           }
+        type    => $type,
+        backend => "memcached",
+        id      => md5_hex(
+            join ";",
+            map { "$_=" . (defined $setup->{$_} ? $setup->{$_} : '__undef__') }
+              qw(version group_name year month page article feed_format feed_type)
+        ),
+        expire => $expiration,
+    };
 
 }
 
 sub render_group_list {
     my $self = shift;
+
+    my $span = CN::Tracing->tracer->create_span(
+        name => "group.render.list",
+        kind => SPAN_KIND_INTERNAL,
+    );
+    dynamically otel_current_context = otel_context_with_span($span);
+    defer { $span->end(); };
+
     my $groups = CN::Model->group->get_groups;
 
     my $archived_groups = $self->config->site->{'cnntp'}->{archived_groups};
@@ -184,7 +205,7 @@ sub render_group_list {
     for my $group (@$groups) {
         my $count = $group->get_recent_articles_count;
         my $avg   = $group->get_daily_average;
-	    next unless $group->latest_article;
+        next unless $group->latest_article;
 
         if ($archived{$group->name}) {
             push @{$groups{archived}}, $group;
@@ -193,18 +214,20 @@ sub render_group_list {
             push @{$groups{inactive}}, $group;
         }
         elsif ($avg > .05) {
-                push @{$groups{active}}, $group; 
+            push @{$groups{active}}, $group;
         }
         else {
-           push @{$groups{slow}}, $group; 
+            push @{$groups{slow}}, $group;
         }
     }
 
     for (qw(active archived slow inactive)) {
-        @{$groups{$_}} = sort { $a->latest_article->age_seconds <=> $b->latest_article->age_seconds }  @{$groups{$_}};
+        @{$groups{$_}} =
+          sort { $a->latest_article->age_seconds <=> $b->latest_article->age_seconds }
+          @{$groups{$_}};
     }
 
-    $self->tpl_param('groups', \%groups); 
+    $self->tpl_param('groups', \%groups);
     return OK, $self->evaluate_template('tpl/group_list.html');
 }
 
@@ -222,12 +245,10 @@ sub render_captcha {
     $self->no_cache(1);
 
     if (my $response = $self->req_param('recaptcha_response_field')) {
-        my $result = $captcha->check_answer
-          ($self->config->site->{cnntp}->{recaptcha_private},
-           $self->request->remote_ip,
-           $self->req_param('recaptcha_challenge_field'),
-           $response,
-          );
+        my $result = $captcha->check_answer(
+            $self->config->site->{cnntp}->{recaptcha_private}, $self->request->remote_ip,
+            $self->req_param('recaptcha_challenge_field'),     $response,
+        );
 
         if ($result->{is_valid}) {
             $self->cookie('captcha' => time);
@@ -248,28 +269,35 @@ my $bot_cache = Combust::Cache->new(type => 'bot', backend => 'memcached');
 sub render_group {
     my $self = shift;
 
+    my $span = CN::Tracing->tracer->create_span(
+        name => "group.render.group",
+        kind => SPAN_KIND_INTERNAL,
+    );
+    dynamically otel_current_context = otel_context_with_span($span);
+    defer { $span->end(); };
+
     my $group = $self->group;
 
     if ($group->name eq 'perl.cpan.testers') {
 
-	my $ip = $self->request->remote_ip;
-	my $data = $bot_cache->fetch(id => "1;testers;$ip");
-        $data   = $data && $data->{data}; 
-	$data ||= { ts => time, count => 0 };
+        my $ip   = $self->request->remote_ip;
+        my $data = $bot_cache->fetch(id => "1;testers;$ip");
+        $data = $data && $data->{data};
+        $data ||= {ts => time, count => 0};
 
-	$data->{count}++;
+        $data->{count}++;
 
-	if ( $data->{ts} < time - 86400 * 4 ) {
-	    $data->{ts}    = time;
-	    $data->{count} = 1;
-	}
+        if ($data->{ts} < time - 86400 * 4) {
+            $data->{ts}    = time;
+            $data->{count} = 1;
+        }
 
-	$bot_cache->store( data => $data );
+        $bot_cache->store(data => $data);
 
         my $valid_cookie = $self->cookie('captcha');
         $valid_cookie = 0 unless $valid_cookie && ($valid_cookie > time - 43200);
 
-	if ($data->{count} >= 4 and !$valid_cookie) {
+        if ($data->{count} >= 4 and !$valid_cookie) {
             return $self->render_captcha;
         }
 
@@ -277,9 +305,10 @@ sub render_group {
 
     my $max = $self->req_param('max') || 0;
 
-    my ($year, $month, $page) = ($self->request_setup->{year}, $self->request_setup->{month}, $self->request_setup->{page});
+    my ($year, $month, $page) =
+      ($self->request_setup->{year}, $self->request_setup->{month}, $self->request_setup->{page});
 
-    return $self->render_year_overview if $year and ! $month;
+    return $self->render_year_overview if $year and !$month;
 
     unless ($year) {
         my $newest_article = $group->latest_article;
@@ -294,28 +323,29 @@ sub render_group {
     my $per_page = 75;
 
     my $thread_count = $group->get_thread_count($month_obj);
-    my $pages = ceil( $thread_count / $per_page);
+    my $pages        = ceil($thread_count / $per_page);
 
     $self->tpl_param(page_number => $page);
     $self->tpl_param(pages       => $pages);
 
-    my $articles = CN::Model->article->get_articles
-        (  query => [ group_id => $group->id,
-                      received => { lt => $month_obj->clone->add(months => 1) },
-                      received => { gt => $month_obj },
-                      ],
-           limit => $per_page,
-           offset => ( $page * $per_page - $per_page ),
-           group_by => 'thread_id',
-           sort_by => 'id desc',
-         );
+    my $articles = CN::Model->article->get_articles(
+        query => [
+            group_id => $group->id,
+            received => {lt => $month_obj->clone->add(months => 1)},
+            received => {gt => $month_obj},
+        ],
+        limit    => $per_page,
+        offset   => ($page * $per_page - $per_page),
+        group_by => 'thread_id',
+        sort_by  => 'id desc',
+    );
 
     $Rose::DB::Object::Manager::Debug = 0;
 
     $self->tpl_param('previous_month' => $group->previous_month($month_obj));
     $self->tpl_param('next_month'     => $group->next_month($month_obj));
 
-    $self->tpl_param(group => $group);
+    $self->tpl_param(group    => $group);
     $self->tpl_param(articles => $articles);
 
     return OK, $self->evaluate_template('tpl/article_list.html');
@@ -324,22 +354,31 @@ sub render_group {
 sub render_year_overview {
     my $self = shift;
     my $year = $self->request_setup->{year};
+
+    my $span = CN::Tracing->tracer->create_span(
+        name => "group.render.year",
+        kind => SPAN_KIND_INTERNAL,
+    );
+    dynamically otel_current_context = otel_context_with_span($span);
+    defer { $span->end(); };
+
     my $group = $self->group;
     my @months;
-    for my $month (1..12) { 
+    for my $month (1 .. 12) {
         my $month_obj = DateTime->new(year => $year, month => $month, day => 1);
-        my $count = 
-          CN::Model->article->get_articles_count
-              (query => [ group_id  => $group->id,
-                          received => { lt => $month_obj->clone->add(months => 1) },
-                          received => { gt => $month_obj },
-                        ],
-              );
-        push @months, { month => $month_obj, count => $count } if $count;
+        my $count     = CN::Model->article->get_articles_count(
+            query => [
+                group_id => $group->id,
+                received => {lt => $month_obj->clone->add(months => 1)},
+                received => {gt => $month_obj},
+            ],
+        );
+        push @months, {month => $month_obj, count => $count} if $count;
     }
 
-    $self->tpl_param('previous_year' => $group->previous_month(DateTime->new(year => $year, month => 1)));
-    $self->tpl_param('next_year'     => $group->next_month(    DateTime->new(year => $year, month => 12)));
+    $self->tpl_param(
+        'previous_year' => $group->previous_month(DateTime->new(year => $year, month => 1)));
+    $self->tpl_param('next_year' => $group->next_month(DateTime->new(year => $year, month => 12)));
 
     $self->tpl_param(group  => $self->group);
     $self->tpl_param(months => \@months);
@@ -348,7 +387,15 @@ sub render_year_overview {
 }
 
 sub render_feed {
-    my $self  = shift;
+    my $self = shift;
+
+    my $span = CN::Tracing->tracer->create_span(
+        name => "group.render.feed",
+        kind => SPAN_KIND_INTERNAL,
+    );
+    dynamically otel_current_context = otel_context_with_span($span);
+    defer { $span->end(); };
+
     my $group = $self->group;
     my $setup = $self->request_setup;
 
@@ -357,13 +404,12 @@ sub render_feed {
     my $feed_format = $setup->{feed_format};
     my $feed_type   = $setup->{feed_type};
 
-    my $articles = CN::Model->article->get_articles
-        (  query => [ group_id => $group->id,
-                    ],
-           limit => 40,
-           ($feed_type eq 'threads' ? (group_by => 'thread_id') : ()),
-           sort_by => 'id desc',
-        );
+    my $articles = CN::Model->article->get_articles(
+        query => [group_id => $group->id,],
+        limit => 40,
+        ($feed_type eq 'threads' ? (group_by => 'thread_id') : ()),
+        sort_by => 'id desc',
+    );
 
     my $base_url = $self->config->base_url('cnntp');
 
@@ -372,15 +418,17 @@ sub render_feed {
         if ($feed_type eq 'threads') {
             $msg_count = $_->thread_count;
         }
-        +{ link   => $base_url . $_->uri,
-           title  => $_->h_subject_parsed 
-                        . ($feed_type eq 'posts'
-                            ? " by " . $_->author_name 
-                            : " ($msg_count message" . ($msg_count > 1 ? "s" : "") . ")" ),
-           body   => $_->body_html,
-           author => ($feed_type eq 'posts' ? $_->author_name : join(", ", $_->thread->authors(4))),
-           date   => $_->received,
-        } 
+        +{  link  => $base_url . $_->uri,
+            title => $_->h_subject_parsed
+              . ( $feed_type eq 'posts'
+                  ? " by " . $_->author_name
+                  : " ($msg_count message" . ($msg_count > 1 ? "s" : "") . ")"
+              ),
+            body   => $_->body_html,
+            author =>
+              ($feed_type eq 'posts' ? $_->author_name : join(", ", $_->thread->authors(4))),
+            date => $_->received,
+        }
     } @$articles;
 
     my $feed_title     = $group->name;
@@ -389,19 +437,21 @@ sub render_feed {
 
     if ($feed_format eq 'rss') {
         my $rss = XML::RSS->new(version => '2.0');
-        $rss->channel(title       => $feed_title,
-                      link        => $feed_link,
-                      description => '...',
-                      pubDate     => DateTime->now->strftime("%a, %d %b %Y %H:%M:%S %z"),
-                      webMaster   => 'ask@perl.org',
-                      copyright   => $feed_copyright,
-                     );
+        $rss->channel(
+            title       => $feed_title,
+            link        => $feed_link,
+            description => '...',
+            pubDate     => DateTime->now->strftime("%a, %d %b %Y %H:%M:%S %z"),
+            webMaster   => 'ask@perl.org',
+            copyright   => $feed_copyright,
+        );
         for my $entry (@entries) {
-            $rss->add_item(title       => $entry->{title},
-                           permaLink   => $entry->{link},
-                           description => $entry->{body},
-                           pubDate     => $entry->{date}->strftime("%a, %d %b %Y %H:%M:%S %z"),
-                          );
+            $rss->add_item(
+                title       => $entry->{title},
+                permaLink   => $entry->{link},
+                description => $entry->{body},
+                pubDate     => $entry->{date}->strftime("%a, %d %b %Y %H:%M:%S %z"),
+            );
         }
         return OK, $rss->as_string, 'application/rss+xml';
 
@@ -422,7 +472,7 @@ sub render_feed {
             $e->add_link($link);
             $feed->add_entry($e);
         }
-        return OK, $feed->as_xml, 'application/atom+xml'
+        return OK, $feed->as_xml, 'application/atom+xml';
     }
 
     return NOT_FOUND;
@@ -431,18 +481,26 @@ sub render_feed {
 sub render_article {
     my $self = shift;
 
+    my $span = CN::Tracing->tracer->create_span(
+        name => "group.render.article",
+        kind => SPAN_KIND_INTERNAL,
+    );
+    dynamically otel_current_context = otel_context_with_span($span);
+    defer { $span->end(); };
+
     my $req = $self->request_setup;
 
-    my $article = CN::Model->article->fetch(group_id => $self->group->id,
-                                            id       => $req->{article}
-                                            );
+    my $article = CN::Model->article->fetch(
+        group_id => $self->group->id,
+        id       => $req->{article}
+    );
 
     return 404 unless $article;
 
-    # should we just return 404? 
+    # should we just return 404?
     return $self->redirect_article
-        unless $article->received->year == $req->{year}
-               and $article->received->month == $req->{month};
+      unless $article->received->year == $req->{year}
+      and $article->received->month == $req->{month};
 
     # $article->email; # die here if we can't get the article from cache or nntp
 
@@ -455,7 +513,7 @@ sub render_article {
 
 sub redirect_article {
     my $self = shift;
-    my $req = $self->request_setup;
+    my $req  = $self->request_setup;
 
     my $article;
 
@@ -466,17 +524,20 @@ sub redirect_article {
 
         # local $Rose::DB::Object::Debug = $Rose::DB::Object::Manager::Debug = 1;
 
-        $article = CN::Model->article->get_articles
-          (query => [ msgid    => $md5,
-                      group_id => $self->group->id,
-                    ]);
+        $article = CN::Model->article->get_articles(
+            query => [
+                msgid    => $md5,
+                group_id => $self->group->id,
+            ]
+        );
         $article = $article && $article->[0];
     }
 
-    $article ||= CN::Model->article->fetch(group_id => $self->group->id,
-                                           id       => $req->{article}
-                                          );
-    
+    $article ||= CN::Model->article->fetch(
+        group_id => $self->group->id,
+        id       => $req->{article}
+    );
+
     return 404 unless $article;
 
     return $self->redirect($article->uri, 'perm');
