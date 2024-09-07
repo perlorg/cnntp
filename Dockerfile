@@ -34,6 +34,8 @@ RUN cpanm Email::MIME Captcha::reCAPTCHA \
   Plack::Middleware::Options \
   Plack::Middleware::AccessLog
 
+RUN cpanm OpenTelemetry OpenTelemetry::SDK OpenTelemetry::Exporter::OTLP Plack::Middleware::OpenTelemetry
+
 ADD . /cnntp
 
 RUN mkdir -p logs; chown cnntp logs
