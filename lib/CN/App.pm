@@ -30,23 +30,26 @@ augment 'reference' => sub {
             my $env = shift;
             my $uri = $env->{PATH_INFO};
 
-            if ($uri eq "/__health"
+            if (    ($uri eq "/__health" or $uri eq "/_health")
                 and ($env->{REQUEST_METHOD} eq "GET" or $env->{REQUEST_METHOD} eq "HEAD"))
             {
+
+                # flush tracing data when there's a health check, otherwise
+                # the OpenTelemetry code waits until the "buffer" is full
+                CN::Tracing->flush(2);
+
                 {
                     my $pspan =
                       OpenTelemetry::Trace->span_from_context(OpenTelemetry::Context->current);
-                    $pspan->set_name($env->{REQUEST_METHOD} . " __health");
+                    $pspan->set_name($env->{REQUEST_METHOD} . " health");
 
-                    my $span = CN::Tracing->tracer->create_span(
-                        name => "flush_otel",
-                        kind => SPAN_KIND_SERVER,
-                    );
-                    dynamically otel_current_context = otel_context_with_span($span);
+                    my $dbh = CN::Model->dbh();
 
-                    $span->end();
+                    unless ($dbh->ping) {
+                        warn "Could not ping database...";
+                        return [500, ['Content-Type' => 'text/plain'], ["db ping\n"]];
+                    }
                 }
-                CN::Tracing->flush(2);
                 return [200, ['Content-Type' => 'text/plain'], ["App says ok\n"]];
             }
 

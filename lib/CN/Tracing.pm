@@ -13,7 +13,7 @@ BEGIN {
 
     # console just to give a little more output
     #$ENV{OTEL_TRACES_EXPORTER}           = 'otlp,console';
-    $ENV{OTEL_BSP_MAX_EXPORT_BATCH_SIZE} = 2;
+    $ENV{OTEL_BSP_MAX_EXPORT_BATCH_SIZE} = 50;
 
     # $ENV{OTEL_TRACES_EXPORTER} = 'console';
 }
