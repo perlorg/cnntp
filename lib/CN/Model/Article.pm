@@ -8,6 +8,12 @@ use CN::Model::Thread;
 use Combust::Cache;
 use HTML::Entities qw(encode_entities);
 use URI::Escape qw(uri_escape);
+use OpenTelemetry::Constants
+  qw( SPAN_KIND_SERVER SPAN_KIND_INTERNAL SPAN_STATUS_ERROR SPAN_STATUS_OK );
+use OpenTelemetry -all;
+use OpenTelemetry::Trace;
+use Syntax::Keyword::Dynamically;
+use experimental qw( defer );
 
 sub decode {
     my ($charset, $octets, $check) = @_;
@@ -158,9 +164,15 @@ sub email {
     my $self = shift;
     return $self->{_article_parsed} if $self->{_article_parsed};
     if (my $data = $cache->fetch(id => join(";", 1, $self->group->id, $self->id))) {
+
         #warn Data::Dumper->Dump([\$data], [qw(email_data)]);
         return $data->{data};
     }
+
+    my $span = CN::Tracing->tracer->create_span(name => "article.fetch",);
+    dynamically otel_current_context = otel_context_with_span($span);
+    defer { $span->end(); };
+
     my $nntp = CN::NNTP->nntp;
     $nntp = CN::NNTP->nntp unless $nntp;
     die "Could not connect to backend NNTP server; please try again later\n" unless $nntp;
