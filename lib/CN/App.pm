@@ -18,6 +18,19 @@ $Combust::Cache::namespace .= '.v2';
 
 logconfig(verbose => 5, saywarn => 1);
 
+$SIG{__WARN__} = sub {
+    my $message = shift;
+    my $span    = OpenTelemetry::Trace->span_from_context(OpenTelemetry::Context->current);
+    if ($span) {
+        my $trace_id = $span->context->hex_trace_id;
+        my $span_id  = $span->context->hex_span_id;
+        warn "trace_id=$trace_id span_id=$span_id $message";
+    }
+    else {
+        warn "$message";
+    }
+};
+
 augment 'reference' => sub {
     my $self = shift;
 
