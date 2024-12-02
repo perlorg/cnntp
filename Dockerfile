@@ -34,7 +34,7 @@ RUN cpanm Email::MIME Captcha::reCAPTCHA \
   Plack::Middleware::Options \
   Plack::Middleware::AccessLog
 
-RUN cpanm https://tmp.askask.com/2024/02/Net-Async-HTTP-Server-0.14bis2.tar.gz
+RUN cpanm https://tmp.askask.com/2024/12/Net-Async-HTTP-Server-0.14bis3.tar.gz
 
 ADD . /cnntp
 
