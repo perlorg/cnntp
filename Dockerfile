@@ -36,6 +36,8 @@ RUN cpanm Email::MIME Captcha::reCAPTCHA \
 
 RUN cpanm OpenTelemetry OpenTelemetry::SDK OpenTelemetry::Exporter::OTLP Plack::Middleware::OpenTelemetry
 
+RUN cpanm https://tmp.askask.com/2024/02/Net-Async-HTTP-Server-0.14bis2.tar.gz
+
 ADD . /cnntp
 
 RUN mkdir -p logs; chown cnntp logs
