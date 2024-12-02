@@ -34,7 +34,11 @@ RUN cpanm Email::MIME Captcha::reCAPTCHA \
   Plack::Middleware::Options \
   Plack::Middleware::AccessLog
 
-RUN cpanm OpenTelemetry OpenTelemetry::SDK OpenTelemetry::Exporter::OTLP Plack::Middleware::OpenTelemetry
+# This makes OpenTelemetry::Exporter::OTLP fail tests
+# https://github.com/docker/setup-buildx-action/issues/356
+ENV OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=""
+
+RUN cpanm -v OpenTelemetry OpenTelemetry::SDK OpenTelemetry::Exporter::OTLP Plack::Middleware::OpenTelemetry
 
 RUN cpanm https://tmp.askask.com/2024/02/Net-Async-HTTP-Server-0.14bis2.tar.gz
 
