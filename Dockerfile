@@ -1,4 +1,4 @@
-FROM harbor.ntppool.org/perlorg/base-os:3.20.2
+FROM harbor.ntppool.org/perlorg/base-os:3.20.3
 
 LABEL org.opencontainers.image.description="Colobus NNTP / ezmlm Web Archive publisher"
 
@@ -33,12 +33,6 @@ RUN cpanm Email::MIME Captcha::reCAPTCHA \
   Starman Plack::Middleware::XForwardedFor \
   Plack::Middleware::Options \
   Plack::Middleware::AccessLog
-
-# This makes OpenTelemetry::Exporter::OTLP fail tests
-# https://github.com/docker/setup-buildx-action/issues/356
-ENV OTEL_EXPORTER_OTLP_TRACES_ENDPOINT=""
-
-RUN cpanm -v OpenTelemetry OpenTelemetry::SDK OpenTelemetry::Exporter::OTLP Plack::Middleware::OpenTelemetry
 
 RUN cpanm https://tmp.askask.com/2024/02/Net-Async-HTTP-Server-0.14bis2.tar.gz
 
