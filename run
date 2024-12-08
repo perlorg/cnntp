@@ -1,6 +1,7 @@
 #!/bin/sh
 
-confd -onetime -confdir=confd -backend env
-export CBCONFIG=/tmp/combust.conf
+export CBCONFIG=`mktemp -d`/combust.conf
+
+gomplate -f combust.conf.tmpl -o $CBCONFIG
 
 exec combust/bin/httpd
