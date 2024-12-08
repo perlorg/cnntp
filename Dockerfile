@@ -5,7 +5,7 @@ LABEL org.opencontainers.image.description="Colobus NNTP / ezmlm Web Archive pub
 USER root
 ENV CBCONFIG=
 
-RUN apk update; apk upgrade apk-tools; apk upgrade; apk add libxml2-dev
+RUN apk update; apk upgrade apk-tools; apk upgrade; apk add libxml2-dev gomplate
 
 ENV CBROOTLOCAL=/cnntp/
 ENV CBROOT=/cnntp/combust

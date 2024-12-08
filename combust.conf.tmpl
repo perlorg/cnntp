@@ -70,12 +70,12 @@ keepalivetimeout    = 30
 {{ $mode := or (getenv "deployment_mode") "test"}}
 
 [cnntp]
-{{ $names := split (or (getenv "web_hostname") "localhost") "," }}
+{{ $names := (or (getenv "web_hostname") "localhost") | strings.Split "," }}
 servername = {{ index $names 0 }}
 {{ if gt (len $names) 1 }}
-aliases = {{ range $names }}{{.}}, {{ end}}
+{{ $names = coll.GoSlice $names 1 }}
+aliases = {{ join $names ", " }}
 {{ end }}
 
 deployment_mode = {{ $mode }}
 archived_groups = {{ getenv "archived_groups" }}
-
