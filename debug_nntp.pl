@@ -1,14 +1,21 @@
 #!/usr/bin/perl
-# Diagnostic script for NNTP article fetching issues.
+# Diagnostic script for NNTP article fetching and memcached issues.
 # Run in the production pod:
-#   kubectl --context dala -n cnntp exec -it [pod] -- perl /app/debug_nntp.pl
+#   kubectl --context dala -n cnntp exec -it [pod] -- perl /cnntp/debug_nntp.pl
 #
-# Tests: connectivity, group selection, article ranges, and article fetching.
+# Tests: NNTP connectivity, group selection, article ranges, article
+# fetching, and memcached connectivity/caching.
 
 use strict;
 use warnings;
 use Net::NNTP;
 use Data::Dumper;
+
+# Set up lib paths for Combust/CN framework (same as production)
+BEGIN {
+    unshift @INC, "$ENV{CBROOT}/lib"      if $ENV{CBROOT};
+    unshift @INC, "$ENV{CBROOTLOCAL}/lib" if $ENV{CBROOTLOCAL};
+}
 
 my $SERVER = 'nntp.perl.org';
 
@@ -139,6 +146,115 @@ print "\n--- Step 5: head() and body() tests ---\n";
 }
 
 $nntp->quit;
+
+# Step 6: Memcached connectivity and article cache
+print "\n--- Step 6: Memcached ---\n";
+
+my $memcached_ok = 0;
+eval {
+    require Combust;
+    require Combust::Cache;
+
+    my $config = Combust->config;
+    my @servers = $config->memcached_servers;
+    print "Configured servers: ", join(", ", map { ref $_ ? "$_->[0] (weight $_->[1])" : $_ } @servers), "\n";
+
+    # Test basic connectivity with a store/fetch round-trip
+    my $test_cache = Combust::Cache->new(type => 'debug_test', backend => 'memcached');
+    my $test_key = "debug_nntp_" . $$;
+    my $test_val = "test_value_" . time;
+
+    my $stored = $test_cache->store(id => $test_key, data => $test_val, expires => 60);
+    if ($stored) {
+        print "OK: store() succeeded\n";
+    } else {
+        print "FAIL: store() returned false -- memcached may be unreachable\n";
+    }
+
+    my $fetched = $test_cache->fetch(id => $test_key);
+    if ($fetched && $fetched->{data} eq $test_val) {
+        print "OK: fetch() round-trip succeeded\n";
+        $memcached_ok = 1;
+    } elsif ($fetched) {
+        print "FAIL: fetch() returned wrong data: got '$fetched->{data}', expected '$test_val'\n";
+    } else {
+        print "FAIL: fetch() returned undef -- memcached not working\n";
+    }
+
+    # Clean up test key
+    $test_cache->delete(id => $test_key);
+};
+if ($@) {
+    print "FAIL: Could not load Combust::Cache: $@\n";
+    print "  (Is CBROOT set? Is combust.conf available?)\n";
+}
+
+# Step 7: Article cache in memcached
+print "\n--- Step 7: Article cache (cn_art_em) ---\n";
+if ($memcached_ok) {
+    eval {
+        my $art_cache = Combust::Cache->new(type => 'cn_art_em', backend => 'memcached');
+
+        # Try fetching a few known article cache keys
+        # Cache key format: "1;{group_id};{article_id}"
+        # We don't know group_ids without DB access, so test with
+        # a sample key and report whether the cache has entries.
+        print "Testing article cache lookups...\n";
+
+        # Try to use the CN::Model if available to look up real articles
+        my $have_db = 0;
+        eval {
+            require CN::Model;
+            $have_db = 1;
+        };
+
+        if ($have_db) {
+            my $groups = CN::Model->group->get_groups(sort_by => 'name');
+            if ($groups && @$groups) {
+                for my $group (@$groups[0 .. min(2, $#$groups)]) {
+                    my $articles = CN::Model->article->get_articles(
+                        query   => [group_id => $group->id],
+                        sort_by => 'id DESC',
+                        limit   => 3,
+                    );
+                    next unless $articles && @$articles;
+                    printf "  Group: %s (id=%d)\n", $group->name, $group->id;
+                    for my $art (@$articles) {
+                        my $cache_id = join(";", 1, $group->id, $art->id);
+                        my $cached = $art_cache->fetch(id => $cache_id);
+                        if ($cached && $cached->{data}) {
+                            my $age = time - ($cached->{created_timestamp} || 0);
+                            printf "    Article %d: CACHED (age: %dd %dh, class: %s)\n",
+                                $art->id, int($age/86400), int(($age%86400)/3600),
+                                ref($cached->{data}) || 'scalar';
+                        } else {
+                            printf "    Article %d: NOT in cache\n", $art->id;
+                        }
+                    }
+                }
+            } else {
+                print "  No groups found in database\n";
+            }
+        } else {
+            print "  Database not available ($@), testing with synthetic keys...\n";
+            # Test a few synthetic keys to see if cache responds at all
+            for my $key ("1;1;1", "1;1;100", "1;2;1") {
+                my $cached = $art_cache->fetch(id => $key);
+                if ($cached) {
+                    print "  Key '$key': HIT\n";
+                } else {
+                    print "  Key '$key': MISS (expected if no articles cached)\n";
+                }
+            }
+        }
+    };
+    if ($@) {
+        print "FAIL: Error testing article cache: $@\n";
+    }
+} else {
+    print "Skipped -- memcached not working (see step 6)\n";
+}
+
 print "\n=== Done ===\n";
 
 sub min { $_[0] < $_[1] ? $_[0] : $_[1] }
