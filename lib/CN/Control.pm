@@ -72,9 +72,10 @@ sub init {
 sub post_process {
     my $self = shift;
 
-    my $req = $self->request;
+    my $req    = $self->request;
+    my $status = $req->response->status || 200;
 
-    if ($self->no_cache) {
+    if ($self->no_cache || $status >= 400) {
         $req->header_out('Cache-Control', 'no-cache,max-age=0,private');
         $req->header_out('Pragma',        'no-cache');
     }
