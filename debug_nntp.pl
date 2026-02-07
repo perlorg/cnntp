@@ -11,12 +11,15 @@ use warnings;
 use Net::NNTP;
 use Data::Dumper;
 
+
+
 # Set up lib paths for Combust/CN framework (same as production)
 BEGIN {
     unshift @INC, "$ENV{CBROOT}/lib"      if $ENV{CBROOT};
     unshift @INC, "$ENV{CBROOTLOCAL}/lib" if $ENV{CBROOTLOCAL};
 }
 
+use CN::Tracing;
 my $SERVER = 'nntp.perl.org';
 
 print "=== NNTP Diagnostics ===\n\n";
@@ -45,9 +48,10 @@ if ($groups) {
     my @perl_groups = sort grep { /^perl\./ } keys %$groups;
     print "OK: Found ", scalar @perl_groups, " perl.* groups\n";
     for my $g (@perl_groups) {
-        my ($est, $low, $high, $status) = @{$groups->{$g}};
-        printf "  %-40s  articles: %d - %d  (est: %d, status: %s)\n",
-            $g, $low, $high, $est, $status // 'n/a';
+        # Net::NNTP list() returns [last, first, flag] per group
+        my ($last, $first, $flag) = @{$groups->{$g}};
+        printf "  %-40s  first: %-6d  last: %-6d  flag: %s\n",
+            $g, $first, $last, $flag // 'n/a';
     }
 } else {
     print "FAIL: list() returned undef: ", $nntp->message, "\n";
@@ -209,31 +213,56 @@ if ($memcached_ok) {
         };
 
         if ($have_db) {
-            my $groups = CN::Model->group->get_groups(sort_by => 'name');
-            if ($groups && @$groups) {
-                for my $group (@$groups[0 .. min(2, $#$groups)]) {
-                    my $articles = CN::Model->article->get_articles(
-                        query   => [group_id => $group->id],
-                        sort_by => 'id DESC',
-                        limit   => 3,
-                    );
-                    next unless $articles && @$articles;
-                    printf "  Group: %s (id=%d)\n", $group->name, $group->id;
-                    for my $art (@$articles) {
-                        my $cache_id = join(";", 1, $group->id, $art->id);
-                        my $cached = $art_cache->fetch(id => $cache_id);
-                        if ($cached && $cached->{data}) {
-                            my $age = time - ($cached->{created_timestamp} || 0);
-                            printf "    Article %d: CACHED (age: %dd %dh, class: %s)\n",
-                                $art->id, int($age/86400), int(($age%86400)/3600),
-                                ref($cached->{data}) || 'scalar';
-                        } else {
-                            printf "    Article %d: NOT in cache\n", $art->id;
-                        }
+            # Check popular groups that are likely to have cached articles
+            my @check_groups;
+            for my $name (qw(perl.perl5.porters perl.beginners perl.perl6.users)) {
+                my $g = CN::Model->group->get_groups(query => [name => $name]);
+                push @check_groups, $g->[0] if $g && @$g;
+            }
+            # Fall back to all groups if none of the above exist
+            unless (@check_groups) {
+                my $all = CN::Model->group->get_groups(sort_by => 'name');
+                @check_groups = @$all[0 .. min(2, $#$all)] if $all && @$all;
+            }
+
+            my ($total_checked, $total_cached, $total_corrupt) = (0, 0, 0);
+            for my $group (@check_groups) {
+                my $articles = CN::Model->article->get_articles(
+                    query   => [group_id => $group->id],
+                    sort_by => 'id DESC',
+                    limit   => 5,
+                );
+                next unless $articles && @$articles;
+                printf "  Group: %s (id=%d)\n", $group->name, $group->id;
+                for my $art (@$articles) {
+                    $total_checked++;
+                    my $cache_id = join(";", 1, $group->id, $art->id);
+                    my $cached = $art_cache->fetch(id => $cache_id);
+                    if ($cached && $cached->{data}) {
+                        $total_cached++;
+                        my $age = time - ($cached->{created_timestamp} || 0);
+                        printf "    Article %d: CACHED (age: %dd %dh, class: %s)\n",
+                            $art->id, int($age/86400), int(($age%86400)/3600),
+                            ref($cached->{data}) || 'scalar';
+                    } elsif ($cached) {
+                        # Truthy cache entry but data is undef/empty --
+                        # email() would return undef without contacting NNTP!
+                        printf "    Article %d: CORRUPT CACHE ENTRY (hash exists, data=%s)\n",
+                            $art->id, defined($cached->{data}) ? "'$cached->{data}'" : 'undef';
+                        $total_corrupt++;
+                    } else {
+                        printf "    Article %d: NOT in cache\n", $art->id;
                     }
                 }
-            } else {
-                print "  No groups found in database\n";
+            }
+            printf "  Summary: %d/%d cached, %d corrupt\n",
+                $total_cached, $total_checked, $total_corrupt;
+            if ($total_corrupt > 0) {
+                print "  ** CORRUPT ENTRIES: cache returns truthy hash with undef data **\n";
+                print "  ** email() returns undef from cache without contacting NNTP **\n";
+            }
+            if ($total_cached == 0 && $total_corrupt == 0 && $total_checked > 0) {
+                print "  Cache is empty (memcached likely restarted/flushed)\n";
             }
         } else {
             print "  Database not available ($@), testing with synthetic keys...\n";
@@ -253,6 +282,150 @@ if ($memcached_ok) {
     }
 } else {
     print "Skipped -- memcached not working (see step 6)\n";
+}
+
+# Step 8: End-to-end email() fetch and cache test
+# Uses the actual production code path: CN::Model::Article->email()
+print "\n--- Step 8: email() end-to-end test ---\n";
+if ($memcached_ok) {
+    eval {
+        require CN::Model;
+        require CN::Model::Article;
+        require Storable;
+
+        # Find a group that exists on the NNTP server
+        my $test_group;
+        for my $name (qw(perl.perl5.porters perl.beginners)) {
+            my $g = CN::Model->group->get_groups(query => [name => $name]);
+            if ($g && @$g) {
+                $test_group = $g->[0];
+                last;
+            }
+        }
+        die "No test group found in database\n" unless $test_group;
+
+        my $articles = CN::Model->article->get_articles(
+            query   => [group_id => $test_group->id],
+            sort_by => 'id DESC',
+            limit   => 1,
+        );
+        die "No articles found for " . $test_group->name . "\n"
+            unless $articles && @$articles;
+
+        my $art = $articles->[0];
+        printf "  Testing: %s article %d\n", $test_group->name, $art->id;
+
+        # Check cache before
+        my $art_cache = Combust::Cache->new(type => 'cn_art_em', backend => 'memcached');
+        my $cache_id = join(";", 1, $test_group->id, $art->id);
+        my $pre_cached = $art_cache->fetch(id => $cache_id);
+        printf "  Before email(): %s\n", $pre_cached ? "in cache" : "NOT in cache";
+
+        # Call email() -- same code path as the HTTP handler
+        my $email = $art->email;
+        if ($email) {
+            printf "  email() returned: %s (Message-ID: %s)\n",
+                ref($email), $email->header('Message-ID') // 'n/a';
+
+            # Check cache after
+            my $post_cached = $art_cache->fetch(id => $cache_id);
+            if ($post_cached && $post_cached->{data}) {
+                printf "  After email(): CACHED (class: %s)\n", ref($post_cached->{data});
+                print "  OK: email() fetch + cache round-trip works\n";
+            } else {
+                print "  FAIL: email() returned data but it's NOT in cache\n";
+                print "  Diagnosing serialization...\n";
+
+                # Test if Storable can freeze the Email::MIME object
+                my $frozen;
+                eval { $frozen = Storable::nfreeze({
+                    data              => $email,
+                    meta_data         => undef,
+                    created_timestamp => time,
+                }) };
+                if ($@) {
+                    printf "  Storable::nfreeze died: %s\n", $@;
+                } else {
+                    printf "  Storable::nfreeze OK (%d bytes)\n", length($frozen);
+                    if (length($frozen) > 1_000_000) {
+                        print "  Frozen size exceeds memcached 1MB default limit\n";
+                    }
+                }
+
+                # Try storing directly to confirm
+                my $test_key = "debug_email_$$";
+                my $stored = $art_cache->store(
+                    id => $test_key, data => $email, expires => 60,
+                );
+                printf "  Direct store() returned: %s\n", $stored ? "true" : "false";
+                if ($stored) {
+                    my $refetch = $art_cache->fetch(id => $test_key);
+                    printf "  Direct fetch() returned: %s\n",
+                        $refetch ? ref($refetch->{data}) || 'scalar' : "undef";
+                }
+                $art_cache->delete(id => $test_key);
+            }
+        } else {
+            print "  email() returned undef\n";
+            print "  NNTP fetch failed -- check CN::NNTP connection\n";
+        }
+    };
+    if ($@) {
+        print "  Error: $@\n";
+    }
+} else {
+    print "Skipped -- memcached not working (see step 6)\n";
+}
+
+# Step 9: Check cache for recently browsed articles
+# Tests if the cache fetch path in email() could return truthy-but-undef
+print "\n--- Step 9: Cache fetch behavior check ---\n";
+if ($memcached_ok) {
+    eval {
+        require CN::Model;
+        my $art_cache = Combust::Cache->new(type => 'cn_art_em', backend => 'memcached');
+
+        # Check a few groups including perl.agents which was recently visited
+        for my $test (
+            ['perl.agents',        15],
+            ['perl.perl5.porters', 270708],
+        ) {
+            my ($gname, $artid) = @$test;
+            my $g = CN::Model->group->get_groups(query => [name => $gname]);
+            next unless $g && @$g;
+            my $group = $g->[0];
+            my $cache_id = join(";", 1, $group->id, $artid);
+            printf "  %s art %d (cache key: cn_art_em;%s):\n", $gname, $artid, $cache_id;
+
+            my $cached = $art_cache->fetch(id => $cache_id);
+            if (!$cached) {
+                print "    fetch() returned: undef (cache miss)\n";
+            } else {
+                printf "    fetch() returned: %s\n", ref($cached) || 'scalar';
+                printf "    {data}:              %s\n",
+                    defined($cached->{data})
+                        ? ref($cached->{data}) || "'$cached->{data}'"
+                        : 'undef';
+                printf "    {created_timestamp}: %s\n",
+                    $cached->{created_timestamp} // 'undef';
+                printf "    {meta_data}:         %s\n",
+                    defined($cached->{meta_data})
+                        ? ref($cached->{meta_data}) || "'$cached->{meta_data}'"
+                        : 'undef';
+
+                # This is the exact check email() does:
+                # if (my $data = $cache->fetch(...)) { return $data->{data} }
+                # A truthy $cached with undef {data} = silent undef return
+                if ($cached && !$cached->{data}) {
+                    print "    ** PROBLEM: fetch() truthy but {data} is false **\n";
+                    print "    ** email() would return undef without contacting NNTP **\n";
+                }
+            }
+        }
+    };
+    if ($@) {
+        print "  Error: $@\n";
+    }
 }
 
 print "\n=== Done ===\n";
