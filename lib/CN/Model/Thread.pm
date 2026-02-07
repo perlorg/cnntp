@@ -62,7 +62,8 @@ sub dump_em {
     my ($self, $level) = @_;
     debug (' \\-> ' x $level);
     if ($self->message) {
-        warn $self->message->email->header("Subject") , "\n";
+        my $subj = $self->message->email ? $self->message->email->header("Subject") : $self->message->h_subject;
+        warn $subj, "\n";
     } else {
         warn "[ Message $self not available ]\n";
     }

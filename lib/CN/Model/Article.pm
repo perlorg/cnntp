@@ -36,9 +36,10 @@ sub msgid_uri {
 
 sub h_msgid {
 	my $self = shift;
-	my $msgid = $self->email->header('Message-ID');
+	my $email = $self->email;
+	my $msgid = $email ? $email->header('Message-ID') : $self->h_messageid;
 	$msgid =~ s{^<(.*)>$}{$1};
-        return $msgid;
+	return $msgid;
 }
 
 sub h_subject_parsed {
