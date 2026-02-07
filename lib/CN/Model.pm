@@ -15,6 +15,15 @@ BEGIN {
 
   sub registry_key { __PACKAGE__ }
   sub init_convention_manager { Combust::RoseDB::ConventionManager->new }
+
+  # Always quote table names to handle MySQL 8 reserved words (e.g. "groups")
+  sub fq_table_sql {
+    my($self, $db) = @_;
+    return $self->{'fq_table_sql'}{$db->{'id'}} ||=
+      join('.', grep { defined } ($self->select_catalog($db),
+                                  $self->select_schema($db),
+                                  $db->quote_table_name($self->table)));
+  }
 }
 BEGIN {
   package CN::Model::_Base;
