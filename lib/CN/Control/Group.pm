@@ -270,7 +270,7 @@ sub render_group {
     my $self = shift;
 
     my $span = CN::Tracing->tracer->create_span(
-        name => "group.render.group",
+        name => "group.render.article_list",
         kind => SPAN_KIND_INTERNAL,
     );
     dynamically otel_current_context = otel_context_with_span($span);
@@ -482,7 +482,7 @@ sub render_article {
     my $self = shift;
 
     my $span = CN::Tracing->tracer->create_span(
-        name => "group.render.article",
+        name => "group.render.article_detail",
         kind => SPAN_KIND_INTERNAL,
     );
     dynamically otel_current_context = otel_context_with_span($span);
@@ -504,8 +504,16 @@ sub render_article {
 
     # $article->email; # die here if we can't get the article from cache or nntp
 
+    my $thread_span = CN::Tracing->tracer->create_span(
+        name => "group.render.article.thread",
+        kind => SPAN_KIND_INTERNAL,
+    );
+    my $thread = eval { $article->thread };
+    $thread_span->end();
+
     $self->tpl_param('article' => $article);
     $self->tpl_param('group'   => $self->group);
+    $self->tpl_param('thread'  => $thread);
 
     return OK, $self->evaluate_template('tpl/article.html');
 

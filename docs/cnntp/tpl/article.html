@@ -45,7 +45,7 @@
 [% PROCESS tpl/article/navigation.html  %]
 
 <ul>
-[% FOR thread = article.thread.threader.rootset %]
+[% FOR thread = thread.threader.rootset %]
 [% thread_part(thread, 0) %]
 [% END %]
 
