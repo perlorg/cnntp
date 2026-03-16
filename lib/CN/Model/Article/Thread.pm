@@ -5,13 +5,21 @@ use base qw(Mail::Thread);
 
 sub _get_hdr {
     my ($class, $msg, $hdr) = @_;
+    # Prefer DB-stored headers to avoid NNTP fetches during thread building
+    if ($hdr eq 'Message-ID') {
+        my $val = $msg->h_messageid;
+        return $val if defined $val && $val ne '';
+    } elsif ($hdr eq 'References') {
+        my $val = $msg->h_references;
+        return $val if defined $val && $val ne '';
+    } elsif ($hdr eq 'Subject') {
+        my $val = $msg->h_subject;
+        return $val if defined $val && $val ne '';
+    }
+    # Fall back to NNTP article only if DB headers are missing
     if (my $email = $msg->email) {
         return $email->header($hdr) || '';
     }
-    # Fall back to database-stored headers when NNTP article is unavailable
-    return $msg->h_messageid  if $hdr eq 'Message-ID';
-    return $msg->h_references if $hdr eq 'References';
-    return $msg->h_subject    if $hdr eq 'Subject';
     return '';
 }
 
