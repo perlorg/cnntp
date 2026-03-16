@@ -165,23 +165,41 @@ sub email {
     my $self = shift;
     return $self->{_article_parsed} if $self->{_article_parsed};
     if (my $data = $cache->fetch(id => join(";", 1, $self->group->id, $self->id))) {
-
-        #warn Data::Dumper->Dump([\$data], [qw(email_data)]);
-        return $data->{data};
+        unless (defined $data->{data}) {
+            warn "article.email: cache returned undef data for article " . $self->id . ", falling through to NNTP\n";
+        } else {
+            return $data->{data};
+        }
     }
 
     my $span = CN::Tracing->tracer->create_span(name => "article.fetch",);
     dynamically otel_current_context = otel_context_with_span($span);
     defer { $span->end(); };
 
-    my $nntp = CN::NNTP->nntp;
-    $nntp = CN::NNTP->nntp unless $nntp;
-    die "Could not connect to backend NNTP server; please try again later\n" unless $nntp;
-    $nntp->group($self->group->name);
-    my $article = $nntp->article($self->id);
+    my $article = eval {
+        local $SIG{ALRM} = sub { die "nntp fetch timeout\n" };
+        alarm(10);
+
+        my $nntp = CN::NNTP->nntp;
+        $nntp = CN::NNTP->nntp unless $nntp;
+        die "Could not connect to backend NNTP server; please try again later\n" unless $nntp;
+        $nntp->group($self->group->name);
+        my $art = $nntp->article($self->id);
+
+        alarm(0);
+        $art;
+    };
+    alarm(0); # ensure alarm is cleared on exception
+    if ($@ =~ /nntp fetch timeout/) {
+        warn "article.email: NNTP fetch timed out for article " . $self->id . "\n";
+        CN::NNTP->reset_connection;
+        die "NNTP fetch timed out; please try again later\n";
+    } elsif ($@) {
+        die $@;
+    }
+
     if ($article) {
 	my $email = Email::MIME->new(join "", @$article);
-	#warn Data::Dumper->Dump([\$email], [qw(email)]);
 	$cache->store(data => $email, expires => 86400*6*30); # cache for 6 months
 	$self->{_article_parsed} = $email;
     }
